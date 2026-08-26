@@ -161,7 +161,7 @@ def load_csv(model, path, force=False):
     file_name = os.path.basename(path)
 
     sha = sha256_of(path)
-    prev = LoadState.objects.filter(table_name=table).first()
+    prev = LoadState.objects.filter(table_name=table, file_path=path).first()
     if prev and prev.sha256 == sha and not force:
         logger.info("  %s ya cargado (%s filas) - skip", file_name, prev.rows_loaded)
         return {"file": file_name, "status": "skipped", "rows": 0}
@@ -173,6 +173,9 @@ def load_csv(model, path, force=False):
                 LoadState.objects.filter(table_name=table).delete()
             _FORCED.add(table)
         force = False  # solo el primer archivo de la tabla borra
+        # y reconstruye: si borramos la tabla, hay que volver a cargar los
+        # archivos anteriores; se marca para no saltarlos
+        prev = None
 
     field_spec = {f.name: type(f).__name__ for f in model._meta.fields if f.name != "id"}
     coerce = {name: COERCERS.get(typ, _empty) for name, typ in field_spec.items()}
@@ -208,8 +211,8 @@ def load_csv(model, path, force=False):
     with transaction.atomic():
         LoadState.objects.update_or_create(
             table_name=table,
+            file_path=path,
             defaults={
-                "file_path": path,
                 "sha256": sha,
                 "rows_loaded": total,
                 "coerced_cells": coerced,

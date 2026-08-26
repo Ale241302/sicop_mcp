@@ -659,7 +659,7 @@ class GoldBaratoYProrrogado(models.Model):
 
 
 class LoadState(models.Model):
-    table_name = models.TextField(unique=True)
+    table_name = models.TextField()
     file_path = models.TextField()
     sha256 = models.TextField()
     rows_loaded = models.BigIntegerField(default=0)
@@ -668,6 +668,7 @@ class LoadState(models.Model):
 
     class Meta:
         db_table = 'sicop_load_state'
+        constraints = [models.UniqueConstraint(fields=['table_name', 'file_path'], name='uniq_load_file')]
 
 
 

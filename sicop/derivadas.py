@@ -212,54 +212,55 @@ def precios_identicos():
 
 
 def invitados_vs_ofertantes():
-    """Por procedimiento: cuantos invitados vs cuantos ofertaron (direccionamiento ex-ante)."""
+    """Por procedimiento: cuantos invitados vs cuantos ofertaron (direccionamiento ex-ante).
+    Agregacion en SQL (no iterar 42M filas en Python)."""
+    from django.db import connection
+    from .models import GoldInvitadosVsOfertantes, SicopOfertas, SicopAdjudicaciones
+
     if SicopInvitaciones.objects.count() == 0:
         print("invitados_vs_ofertantes: sin datos (invitaciones no cargadas)", flush=True)
         return
-    print("invitados_vs_ofertantes: agrupando invitaciones...", flush=True)
-    inv = defaultdict(set)
-    inv_meta = {}
-    for r in SicopInvitaciones.objects.values("NRO_SICOP", "CEDULA_PROVEEDOR", "CED_INSTITUCION", "INSTITUCION", "NUMERO_PROCEDIMIENTO"):
-        inv[r["NRO_SICOP"]].add(r["CEDULA_PROVEEDOR"])
-        inv_meta.setdefault(r["NRO_SICOP"], (r["NUMERO_PROCEDIMIENTO"], r["CED_INSTITUCION"], r["INSTITUCION"]))
 
-    print("invitados_vs_ofertantes: agrupando ofertas...", flush=True)
-    of = defaultdict(set)
-    if SicopOfertas.objects.count():
-        for r in SicopOfertas.objects.values("NRO_SICOP", "CEDULA_PROVEEDOR").iterator():
-            of[r["NRO_SICOP"]].add(r["CEDULA_PROVEEDOR"])
+    print("invitados_vs_ofertantes: SQL aggregation (joins 2-vias)...", flush=True)
+    q1 = 'SELECT "NRO_SICOP", COUNT(DISTINCT "CEDULA_PROVEEDOR") FROM sicop_invitaciones GROUP BY "NRO_SICOP"'
+    q2 = 'SELECT "NRO_SICOP", COUNT(DISTINCT "CEDULA_PROVEEDOR") FROM sicop_ofertas GROUP BY "NRO_SICOP"'
+    q3 = ('SELECT i."NRO_SICOP", COUNT(DISTINCT i."CEDULA_PROVEEDOR") FROM sicop_invitaciones i '
+          'LEFT JOIN sicop_ofertas o ON o."NRO_SICOP"=i."NRO_SICOP" AND o."CEDULA_PROVEEDOR"=i."CEDULA_PROVEEDOR" '
+          'WHERE o."NRO_SICOP" IS NULL GROUP BY i."NRO_SICOP"')
+    q4 = ('SELECT o."NRO_SICOP", COUNT(DISTINCT o."CEDULA_PROVEEDOR") FROM sicop_ofertas o '
+          'LEFT JOIN sicop_invitaciones i ON i."NRO_SICOP"=o."NRO_SICOP" AND i."CEDULA_PROVEEDOR"=o."CEDULA_PROVEEDOR" '
+          'WHERE i."NRO_SICOP" IS NULL GROUP BY o."NRO_SICOP"')
+    q5 = ('SELECT DISTINCT a."NRO_SICOP" FROM sicop_adjudicaciones a '
+          'JOIN sicop_invitaciones i ON i."NRO_SICOP"=a."NRO_SICOP" AND i."CEDULA_PROVEEDOR"=a."CEDULA_PROVEEDOR"')
 
-    print("invitados_vs_ofertantes: adjudicatarios...", flush=True)
-    adj = {}
-    if SicopAdjudicaciones.objects.count():
-        for r in SicopAdjudicaciones.objects.values("NRO_SICOP", "CEDULA_PROVEEDOR").iterator():
-            if r["NRO_SICOP"] not in adj:
-                adj[r["NRO_SICOP"]] = r["CEDULA_PROVEEDOR"]
+    with connection.cursor() as cur:
+        cur.execute(q1); n_inv = dict(cur.fetchall())
+        cur.execute(q2); n_of = dict(cur.fetchall())
+        cur.execute(q3); inv_no_of = dict(cur.fetchall())
+        cur.execute(q4); of_sin_inv = dict(cur.fetchall())
+        cur.execute(q5); adj_inv = {r[0] for r in cur.fetchall()}
+        cur.execute('SELECT "NRO_SICOP", MAX("NUMERO_PROCEDIMIENTO"), MAX("CED_INSTITUCION"), MAX("INSTITUCION") FROM sicop_invitaciones GROUP BY "NRO_SICOP"')
+        meta = {r[0]: (r[1], r[2], r[3]) for r in cur.fetchall()}
 
+    nros = set(n_inv) | set(n_of)
     GoldInvitadosVsOfertantes.objects.all().delete()
     batch = []
-    total = 0
-    for nro, invitados in inv.items():
-        ofertaron = of.get(nro, set())
-        n_inv = len(invitados)
-        n_of = len(ofertaron)
-        n_no = len(invitados - ofertaron)
-        n_sin = len(ofertaron - invitados)
-        tasa = round(n_of / n_inv * 100, 1) if n_inv else None
-        num_proc, ced_inst, nombre_inst = inv_meta.get(nro, (None, None, None))
-        ganador = adj.get(nro)
-        obj = GoldInvitadosVsOfertantes(
-            NRO_SICOP=nro, NUMERO_PROCEDIMIENTO=num_proc, CEDULA_INSTITUCION=ced_inst,
-            INSTITUCION=nombre_inst, N_INVITADOS=n_inv, N_OFERTARON=n_of,
-            N_INVITADOS_QUE_NO_OFERTARON=n_no, N_OFERTARON_SIN_INVITACION=n_sin,
-            TASA_RESPUESTA_PCT=tasa, ADJUDICATARIO_FUE_INVITADO=("S" if ganador and ganador in invitados else "N"),
-        )
-        batch.append(obj)
-        total += 1
+    for nro in nros:
+        ni = n_inv.get(nro) or 0
+        no = n_of.get(nro) or 0
+        m = meta.get(nro, (None, None, None))
+        batch.append(GoldInvitadosVsOfertantes(
+            NRO_SICOP=nro, NUMERO_PROCEDIMIENTO=m[0], CEDULA_INSTITUCION=m[1], INSTITUCION=m[2],
+            N_INVITADOS=ni, N_OFERTARON=no,
+            N_INVITADOS_QUE_NO_OFERTARON=inv_no_of.get(nro) or 0,
+            N_OFERTARON_SIN_INVITACION=of_sin_inv.get(nro) or 0,
+            TASA_RESPUESTA_PCT=round(no / ni * 100, 1) if ni else None,
+            ADJUDICATARIO_FUE_INVITADO="S" if nro in adj_inv else "N",
+        ))
         if len(batch) >= BATCH:
             _flush(GoldInvitadosVsOfertantes, batch)
     _flush(GoldInvitadosVsOfertantes, batch)
-    print(f"invitados_vs_ofertantes: {total} procedimientos", flush=True)
+    print(f"invitados_vs_ofertantes: {len(nros)} procedimientos (SQL 2-vias)", flush=True)
 
 
 def run(names=None):
