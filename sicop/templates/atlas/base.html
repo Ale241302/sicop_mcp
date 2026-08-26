@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Atlas SICOP{% endblock %}</title>
+<style>
+:root{--g:#FBFAF8;--s:#fff;--ink:#1C1A18;--mut:#7A736A;--ru:#E4DFD7;--ac:#B4531F;--ok:#0E8C7A;--bad:#B3261E;--wa:#9A5B00}
+*{box-sizing:border-box}body{margin:0;background:var(--g);color:var(--ink);font:16px/1.55 Georgia,serif}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px}
+nav{display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:16px 20px;border-bottom:1px solid var(--ru);background:var(--s)}
+nav a{text-decoration:none;color:var(--ac);font:600 14px/1 Arial,sans-serif}
+nav form{display:flex;gap:6px;margin-left:auto}
+nav input{padding:6px 10px;border:1px solid var(--ru);border-radius:3px;font:13px monospace}
+h1{font:700 26px/1.1 Arial,sans-serif;letter-spacing:-.02em}
+h2{font:600 18px/1.2 Arial,sans-serif;margin:28px 0 8px}
+.card{background:var(--s);border:1px solid var(--ru);border-radius:4px;padding:16px 18px;margin:10px 0;box-shadow:0 1px 2px #1c1a1808}
+table{border-collapse:collapse;width:100%;font:13px/1.5 monospace}
+th{font:600 11px/1 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);text-align:left;padding:8px;border-bottom:1px solid var(--ru)}
+td{padding:7px 8px;border-bottom:1px solid #EFEBE4}
+.r{text-align:right}
+.sobre{border-left:3px solid var(--wa);background:#9A5B0014;padding:10px 14px;font:12px/1.5 monospace;color:#5c4a20;margin:8px 0}
+.sobre b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--wa)}
+.trampa{border-left:3px solid var(--bad);background:#B3261E12;padding:10px 14px;font:12px/1.5 monospace;color:#7a1d17;margin:8px 0}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.wa{color:var(--wa)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--s);border:1px solid var(--ru);border-radius:4px;padding:14px}
+.kpi .n{font:700 24px/1 Arial,sans-serif;font-variant-numeric:tabular-nums}
+.kpi .l{font:11px/1.3 Arial,sans-serif;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.badge{display:inline-block;padding:2px 8px;border-radius:2px;font:700 11px/1 monospace}
+.badge.g{background:#0E8C7A22;color:var(--ok)}.badge.r{background:#B3261E22;color:var(--bad)}.badge.w{background:#9A5B0022;color:var(--wa)}
+.search-box{margin:20px 0}
+a{color:var(--ac)}
+@media(max-width:700px){.wrap{padding:0 12px 60px}}
+</style></head>
+<body>
+<nav>
+  <a href="/atlas/">Atlas SICOP</a>
+  <a href="/atlas/calidad/">Calidad</a>
+  <a href="/atlas/proveedores/">Proveedores</a>
+  <a href="/api/v1/resumen/">API</a>
+  <form action="/atlas/buscar/" method="get">
+    <input name="q" placeholder="buscar producto / proveedor / institucion" value="{{ request.GET.q|default:'' }}">
+    <button type="submit">Buscar</button>
+  </form>
+</nav>
+<div class="wrap">
+{% block body %}{% endblock %}
+</div>
+</body></html>

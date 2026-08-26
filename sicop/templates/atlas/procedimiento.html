@@ -1,0 +1,39 @@
+{% extends "atlas/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block body %}
+<h1>Procedimiento {{ nro }}</h1>
+
+{% if exp %}<div class="card">
+  <b>Expediente:</b> tramos completos:
+  {% for k, v in exp.items %}{% if k != 'id' %}<span class="badge {% if v %}g{% else %}w{% endif %}">{{ k }}={{ v }}</span> {% endif %}{% endfor %}
+</div>{% endif %}
+
+{% if reg and reg.factores %}
+<div class="card"><b>Régimen de evaluación:</b>
+{% for f in reg.factores %}{{ f.FACTOR_EVAL }} ({{ f.PORC_EVAL }}%) · {% endfor %}</div>
+{% endif %}
+
+<h2>Líneas adjudicadas</h2>
+<table><tr><th>Línea</th><th>Descripción</th><th>Proveedor</th><th class="r">Monto CRC</th></tr>
+{% for a in adj %}<tr><td>{{ a.LINEA }}</td><td>{{ a.DESCR_BIEN_SERVICIO|truncatechars:60 }}</td>
+<td>{{ a.NOMBRE_PROVEEDOR|default:"—" }}</td><td class="r">₡{{ a.MONTO_ADJU_LINEA_CRC|floatformat:0 }}</td></tr>{% endfor %}
+</table>
+
+<h2>Competencia (quién ofertó)</h2>
+{% if comp.lineas %}
+<table><tr><th>Línea</th><th>Oferente</th><th class="r">Precio CRC</th><th>¿Ganó?</th></tr>
+{% for l in comp.lineas %}<tr><td>{{ l.NRO_LINEA }}</td><td>{{ l.NOMBRE_PROVEEDOR }}</td>
+<td class="r">{{ l.PRECIO_UNITARIO_CRC|floatformat:0 }}</td><td>{% if l.ES_ADJUDICATARIO == 'S' %}<span class="badge g">SÍ</span>{% endif %}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="wa">Sin líneas en el cruce (cobertura 62,6%: la ausencia de registro no es ausencia del hecho).</p>{% endif %}
+
+<h2>Invitados</h2>
+{% if inv.invitados %}<table><tr><th>Proveedor</th><th>Fecha</th></tr>
+{% for i in inv.invitados %}<tr><td>{{ i.NOMBRE_PROVEEDOR }}</td><td>{{ i.FECHA_INVITACION|date:"d/m/Y" }}</td></tr>{% endfor %}
+</table>{% else %}<p>Sin invitaciones registradas.</p>{% endif %}
+
+<h2>Recursos de objeción</h2>
+{% if rec.recursos %}<table><tr><th>Recurso</th><th>Recurrente</th><th>Resultado</th></tr>
+{% for r in rec.recursos %}<tr><td>{{ r.NRO_RECURSO }}</td><td>{{ r.CEDULA_PROVEEDOR }}</td><td>{{ r.RESULTADO|default:"—" }}</td></tr>{% endfor %}
+</table>{% else %}<p>Sin recursos.</p>{% endif %}
+{% endblock %}

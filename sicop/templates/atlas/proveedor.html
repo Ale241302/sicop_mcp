@@ -1,0 +1,31 @@
+{% extends "atlas/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block body %}
+<h1>{{ f.nombre|default:cedula }} <span class="badge w">{{ f.perfil|default:"perfil" }}</span></h1>
+<p><a href="/atlas/buscar/?q={{ cedula }}">buscar</a> · cédula {{ cedula }}</p>
+
+<div class="sobre"><b>Sobre</b>nivel_medicion: {{ f.sobre.nivel_medicion }} · cobertura: {{ f.sobre.cobertura_cruce }}<br>
+{% for c in f.sobre.caveats %}<span class="wa">⚠</span> {{ c }}<br>{% endfor %}</div>
+
+<h2>Captación por año (adjudicado CRC)</h2>
+<table><tr><th>Año</th><th class="r">Monto</th><th class="r">Líneas</th></tr>
+{% for a in f.adjudicaciones_por_anio %}<tr><td>{{ a.ANO }}</td><td class="r">₡{{ a.monto_crc|floatformat:0 }}</td><td class="r">{{ a.n_lineas }}</td></tr>{% endfor %}</table>
+
+<h2>Ejecución vs captación (cartera)</h2>
+<table><tr><th>Año</th><th class="r">Ejecutado CRC</th><th class="r">Adjudicado CRC</th><th class="r">Ratio</th></tr>
+{% for c in f.cartera_ejecucion_vs_captacion %}<tr><td>{{ c.ANIO_EJECUCION }}</td><td class="r">{{ c.MONTO_EJECUTADO_CRC|default:"—" }}</td><td class="r">{{ c.MONTO_ADJUDICADO_CRC|default:"—" }}</td><td class="r">{{ c.RATIO_EJECUCION_CAPTACION|default:"—" }}</td></tr>{% endfor %}
+</table>
+<div class="trampa">⚠ NO comparar captación con ejecución como si fueran el mismo nivel: captación = lo que ganó en papel; ejecución = lo que facturó (solo colones, dedupe por NRO_ORDEN).</div>
+
+<h2>Desempeño de entrega</h2>
+{% if f.desempeno %}
+<table><tr><th>Líneas recibidas</th><th>Cumple</th><th class="r">Tasa</th><th class="r">Días mediano</th><th class="r">% con atraso</th></tr>
+{% for d in f.desempeno %}<tr><td>{{ d.LINEAS_RECIBIDAS }}</td><td>{{ d.N_CUMPLE }}</td><td class="r">{{ d.TASA_CUMPLIMIENTO|default:"—" }}</td><td class="r">{{ d.DIAS_MEDIANO|default:"—" }}</td><td class="r">{{ d.PCT_CON_ATRASO|default:"—" }}</td></tr>{% endfor %}
+</table>
+{% else %}<p>Sin datos de desempeño.</p>{% endif %}
+
+<h2>Familias top (con muestra suficiente)</h2>
+<table><tr><th>Familia</th><th class="r">Líneas</th><th class="r">Tasa</th></tr>
+{% for f2 in f.familias_top %}<tr><td><a href="/atlas/mercado/{{ f2.FAMILIA_UNSPSC }}/">{{ f2.FAMILIA_UNSPSC }}</a></td><td class="r">{{ f2.LINEAS_RECIBIDAS }}</td><td class="r">{{ f2.TASA_CUMPLIMIENTO|default:"—" }}</td></tr>{% endfor %}
+</table>
+{% endblock %}

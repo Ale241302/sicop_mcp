@@ -1,0 +1,37 @@
+{% extends "atlas/base.html" %}
+{% block title %}Calidad del dato{% endblock %}
+{% block body %}
+<h1>Calidad del dato <span class="badge g">primero</span></h1>
+<p>Regla del proyecto: <b>toda afirmación sobre el dato va con el comando que la produjo.</b> Acá: llenado por campo y año, tests-gate, corridas, vigilancia y el diccionario con trampas.</p>
+
+<h2>Bronze inmutable</h2>
+<div class="kpi"><div class="n">{{ bronze }}</div><div class="l">Filas en bronze (crudo + hash + corrida)</div></div>
+
+<h2>Deriva por año (huecos declarados)</h2>
+<div style="max-height:400px;overflow:auto">
+<table><tr><th>Conjunto</th><th>Campo</th><th>Año</th><th class="r">Llenado</th></tr>
+{% for d in deriva %}<tr><td>{{ d.CONJUNTO }}</td><td>{{ d.CAMPO }}</td><td>{{ d.ANIO }}</td>
+<td class="r"><span class="{% if d.LLENADO_PCT < 50 %}bad{% elif d.LLENADO_PCT < 95 %}wa{% else %}ok{% endif %}">{{ d.LLENADO_PCT|default:"—" }}%</span></td></tr>{% endfor %}
+</table></div>
+
+<h2>Tests como gate</h2>
+<table><tr><th>Corrida</th><th>Test</th><th>Resultado</th><th>Valor</th></tr>
+{% for t in tests %}<tr><td>{{ t.CORRIDA_ID }}</td><td>{{ t.TEST }}</td>
+<td><span class="badge {% if t.RESULTADO == 'PASS' %}g{% else %}r{% endif %}">{{ t.RESULTADO }}</span></td><td>{{ t.VALOR_OBTENIDO }}</td></tr>{% endfor %}
+</table>
+
+<h2>Corridas</h2>
+<table><tr><th>Corrida</th><th>Estado</th><th>Alcance</th><th>Inicio</th></tr>
+{% for c in corridas %}<tr><td>{{ c.CORRIDA_ID }}</td><td><span class="badge {% if c.ESTADO == 'PUBLICADO' %}g{% elif c.ESTADO == 'BLOQUEADO' %}r{% else %}w{% endif %}">{{ c.ESTADO }}</span></td><td>{{ c.ALCANCE }}</td><td>{{ c.INICIADO_EN|date:"d/m H:i" }}</td></tr>{% endfor %}
+</table>
+
+<h2>Vigilancia de reescritura</h2>
+<table><tr><th>Mes</th><th>Resultado</th><th>Detalle</th><th>Fecha</th></tr>
+{% for v in vigilancia %}<tr><td>{{ v.aaaamm }}</td><td>{{ v.resultado }}</td><td>{{ v.detalle }}</td><td>{{ v.fecha|date:"d/m H:i" }}</td></tr>{% endfor %}
+</table>
+
+<h2>Campos con trampa documentada (catalogo_campo)</h2>
+<table><tr><th>Tabla</th><th>Campo</th><th>Trampa</th><th>Unidad</th></tr>
+{% for c in campos %}<tr><td>{{ c.TABLA }}</td><td>{{ c.CAMPO }}</td><td class="bad">{{ c.TRAMPA }}</td><td>{{ c.UNIDAD|default:"—" }}</td></tr>{% endfor %}
+</table>
+{% endblock %}

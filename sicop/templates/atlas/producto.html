@@ -1,0 +1,33 @@
+{% extends "atlas/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block body %}
+<h1>Producto {{ ph.codigo_cl }}</h1>
+
+{% for c in ph.catalogo %}
+<div class="card"><b>{{ c.DESCRIPCION }}</b><br>
+  Marca: {{ c.MARCA|default:"—" }} · Modelo: {{ c.MODELO|default:"—" }}
+  <span class="badge {% if c.MARCA_PLAUSIBLE == 'S' %}g{% else %}w{% endif %}">marca_plausible {{ c.MARCA_PLAUSIBLE }}</span><br>
+  <span style="color:var(--mut)">Familia {{ c.FAMILIA_UNSPSC }} · {{ c.LINEAS_EJECUCION }} líneas ejecución · proveedor top: {{ c.PROVEEDOR_TOP|default:"—" }}</span>
+</div>
+{% endfor %}
+
+<div class="sobre"><b>Sobre</b>nivel_medicion: {{ ph.sobre.nivel_medicion }} · cobertura: {{ ph.sobre.cobertura_cruce }}<br>
+{% for c in ph.sobre.caveats %}<span class="wa">⚠</span> {{ c }}<br>{% endfor %}</div>
+
+<h2>Serie de precios ofertados</h2>
+<table><tr><th>Año</th><th class="r">Ofertas</th><th class="r">Adjudic.</th><th class="r">Mediana CRC</th><th class="r">Min</th><th class="r">Max</th></tr>
+{% for s in ph.serie_precios_ofertados %}<tr><td>{{ s.anio }}</td><td class="r">{{ s.n_ofertas }}</td><td class="r">{{ s.n_adjudicaciones }}</td>
+<td class="r">{{ s.precio_crc_mediano|floatformat:0|default:"—" }}</td><td class="r">{{ s.precio_crc_min|floatformat:0|default:"—" }}</td><td class="r">{{ s.precio_crc_max|floatformat:0|default:"—" }}</td></tr>{% endfor %}
+</table>
+<div class="trampa">⚠ Precios simbólicos (≤1 CRC) y digitaciones contaminan min/max — mirar la mediana. El mismo código puede agrupar productos muy distintos (dispersión 4×): comparar por firma de SKU, no por código a secas.</div>
+
+<h2>Adjudicaciones por año</h2>
+<table><tr><th>Año</th><th class="r">Líneas</th><th class="r">Monto CRC</th></tr>
+{% for a in ph.adjudicaciones_por_anio %}<tr><td>{{ a.ANO }}</td><td class="r">{{ a.n_lineas }}</td><td class="r">₡{{ a.monto_crc|floatformat:0 }}</td></tr>{% endfor %}
+</table>
+
+<h2>Proveedores top</h2>
+<table><tr><th>Cédula</th><th>Nombre</th><th class="r">Monto CRC</th></tr>
+{% for p in ph.proveedores_top %}<tr><td><a href="/atlas/proveedor/{{ p.CEDULA_PROVEEDOR }}/">{{ p.CEDULA_PROVEEDOR }}</a></td><td>{{ p.NOMBRE_PROVEEDOR }}</td><td class="r">₡{{ p.monto_crc|floatformat:0 }}</td></tr>{% endfor %}
+</table>
+{% endblock %}

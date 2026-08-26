@@ -1,0 +1,50 @@
+{% extends "atlas/base.html" %}
+{% block title %}Atlas SICOP{% endblock %}
+{% block body %}
+<h1>Atlas SICOP <span class="badge g">canónico</span></h1>
+<p style="color:var(--mut)">Datos abiertos de contratación pública de Costa Rica · 2020–2026 · la app le pone cara al corpus y al harness.</p>
+
+<h2>El corpus en una vista</h2>
+<div class="kpis">
+  <div class="kpi"><div class="n">{{ resumen.adjudicaciones|default:"—" }}</div><div class="l">Líneas adjudicadas</div></div>
+  <div class="kpi"><div class="n">{{ resumen.ofertas|default:"—" }}</div><div class="l">Ofertas</div></div>
+  <div class="kpi"><div class="n">{{ resumen.ordenes|default:"—" }}</div><div class="l">Órdenes de pedido</div></div>
+  <div class="kpi"><div class="n">{{ resumen.invitaciones|default:"—" }}</div><div class="l">Invitaciones</div></div>
+</div>
+<div class="sobre"><b>Sobre</b>
+  nivel_medicion: {{ sobre.nivel_medicion }} · cobertura_cruce: {{ sobre.cobertura_cruce }}
+  · moneda: {{ sobre.moneda }}<br>
+  {% for c in sobre.caveats %}<span class="wa">⚠</span> {{ c }}<br>{% endfor %}
+</div>
+
+<h2>Calidad del dato (entra primero)</h2>
+{% if tests %}
+<table><tr><th>Corrida</th><th>Test</th><th>Resultado</th><th>Valor</th></tr>
+{% for t in tests %}<tr><td>{{ t.CORRIDA_ID }}</td><td>{{ t.TEST }}</td>
+<td><span class="badge {% if t.RESULTADO == 'PASS' %}g{% else %}r{% endif %}">{{ t.RESULTADO }}</span></td>
+<td>{{ t.VALOR_OBTENIDO }}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="bad">Sin tests ejecutados todavía — corré <code>python manage.py fase1 --solo-tests</code>.</p>{% endif %}
+
+<h2>Deriva de esquema (huecos por año)</h2>
+{% if deriva %}
+<table><tr><th>Conjunto</th><th>Campo</th><th>Año</th><th>Llenado</th></tr>
+{% for d in deriva %}<tr><td>{{ d.CONJUNTO }}</td><td>{{ d.CAMPO }}</td><td>{{ d.ANIO }}</td>
+<td><span class="{% if d.LLENADO_PCT < 50 %}bad{% elif d.LLENADO_PCT < 95 %}wa{% else %}ok{% endif %}">{{ d.LLENADO_PCT|default:"—" }}%</span></td></tr>{% endfor %}
+</table>
+<p class="wa" style="font-size:13px">Regla: ninguna serie multianual se publica sin declarar sus huecos.</p>
+{% endif %}
+
+<h2>Señales del día (cara del harness)</h2>
+{% if senales %}
+<table><tr><th>Fecha</th><th>Tipo</th><th>Prioridad</th><th>Procedimiento</th></tr>
+{% for s in senales %}<tr><td>{{ s.fecha|date:"d/m H:i" }}</td><td>{{ s.tipo }}</td>
+<td><span class="badge {% if s.prioridad == 'alta' %}r{% else %}w{% endif %}">{{ s.prioridad }}</span></td>
+<td><a href="/atlas/procedimiento/{{ s.nro_sicop }}/">{{ s.nro_sicop }}</a></td></tr>{% endfor %}
+</table>
+{% else %}<p>Sin señales recientes.</p>{% endif %}
+
+<h2>Navegar</h2>
+<p>Buscar arriba, o ir a <a href="/atlas/proveedores/">proveedores</a> por monto adjudicado, o a un
+<a href="/atlas/procedimiento/20260402609/">procedimiento de ejemplo</a>.</p>
+{% endblock %}

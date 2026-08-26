@@ -1,0 +1,27 @@
+{% extends "atlas/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block body %}
+<h1>Mercado familia {{ familia }}</h1>
+{% if m and m.adjudicatarios_top_por_monto %}
+<h2>Adjudicatarios top (por monto)</h2>
+<table><tr><th>Cédula</th><th>Nombre</th><th class="r">Líneas</th><th class="r">Monto CRC</th></tr>
+{% for a in m.adjudicatarios_top_por_monto %}<tr><td><a href="/atlas/proveedor/{{ a.CEDULA_PROVEEDOR }}/">{{ a.CEDULA_PROVEEDOR }}</a></td><td>{{ a.NOMBRE_PROVEEDOR }}</td><td class="r">{{ a.n_lineas }}</td><td class="r">₡{{ a.monto_crc|floatformat:0 }}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="wa">Sin adjudicaciones con código CL en esta familia (CL ausente 2020/2023/2024).</p>{% endif %}
+
+<h2>Oferentes top</h2>
+{% if m and m.oferentes_top %}
+<table><tr><th>Oferente</th><th class="r">Ofertas</th><th class="r">Ganadas</th></tr>
+{% for o in m.oferentes_top %}<tr><td>{{ o.NOMBRE_PROVEEDOR }}</td><td class="r">{{ o.n_ofertas }}</td><td class="r">{{ o.n_ganadas }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+
+<h2>Productos del catálogo</h2>
+{% if m and m.productos_top %}
+<table><tr><th>Código</th><th>Descripción</th><th class="r">Líneas</th></tr>
+{% for p in m.productos_top %}<tr><td><a href="/atlas/producto/{{ p.CODIGO_PRODUCTO_CL }}/">{{ p.CODIGO_PRODUCTO_CL }}</a></td><td>{{ p.DESCRIPCION|truncatechars:60 }}</td><td class="r">{{ p.LINEAS_EJECUCION }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% if m.sobre %}<div class="sobre"><b>Sobre</b>nivel_medicion: {{ m.sobre.nivel_medicion }} · cobertura: {{ m.sobre.cobertura_cruce }}<br>
+{% for c in m.sobre.caveats %}<span class="wa">⚠</span> {{ c }}<br>{% endfor %}</div>{% endif %}
+{% endblock %}

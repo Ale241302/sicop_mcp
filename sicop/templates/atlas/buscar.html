@@ -1,0 +1,23 @@
+{% extends "atlas/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block body %}
+<h1>Buscar <small style="color:var(--mut)">{{ q }}</small></h1>
+{% if not res %}
+<form class="search-box" action="/atlas/buscar/" method="get"><input name="q" size="40" placeholder="ej: UPS, HAIX, SONDEL, 81112399"><button type="submit">Buscar</button></form>
+<p style="color:var(--mut)">Busca en catálogo de productos (descripción/marca/modelo), proveedores e instituciones.</p>
+{% else %}
+<h2>Productos ({{ res.productos|length }})</h2>
+<table><tr><th>Código</th><th>Descripción</th><th>Marca</th><th>Proveedor top</th></tr>
+{% for p in res.productos %}<tr><td><a href="/atlas/producto/{{ p.CODIGO_PRODUCTO_CL }}/">{{ p.CODIGO_PRODUCTO_CL }}</a></td><td>{{ p.DESCRIPCION|truncatechars:70 }}</td><td>{{ p.MARCA|default:"—" }}</td><td>{{ p.PROVEEDOR_TOP|default:"—" }}</td></tr>{% endfor %}
+</table>
+<h2>Proveedores ({{ res.proveedores|length }})</h2>
+<table><tr><th>Cédula</th><th>Nombre</th><th class="r">Líneas</th><th class="r">Monto CRC</th></tr>
+{% for p in res.proveedores %}<tr><td><a href="/atlas/proveedor/{{ p.CEDULA_PROVEEDOR }}/">{{ p.CEDULA_PROVEEDOR }}</a></td><td>{{ p.NOMBRE_PROVEEDOR }}</td><td class="r">{{ p.lineas }}</td><td class="r">₡{{ p.monto_crc|floatformat:0 }}</td></tr>{% endfor %}
+</table>
+<h2>Instituciones ({{ res.instituciones|length }})</h2>
+<table><tr><th>Cédula</th><th>Nombre</th><th class="r">Líneas</th></tr>
+{% for i in res.instituciones %}<tr><td>{{ i.CEDULA }}</td><td>{{ i.INSTITUCION }}</td><td class="r">{{ i.lineas }}</td></tr>{% endfor %}
+</table>
+<div class="sobre"><b>Sobre</b>{{ res.sobre.nivel_medicion }}</div>
+{% endif %}
+{% endblock %}
