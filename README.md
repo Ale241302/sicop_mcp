@@ -1,4 +1,4 @@
-# sicop_mcp
+﻿# sicop_mcp
 
 Servidor de datos SICOP (contratacion publica de Costa Rica, datos abiertos 2020-2026)
 expuesto como **API REST** y como **servidor MCP** para asistentes de IA.
@@ -146,7 +146,7 @@ python manage.py pendientes --json   # P1-P7
 
 ```bash
 docker compose up -d --build
-# expone 8100 -> django, con Salidas montado en /data/salidas
+# expone 8400 -> django (puerto libre, no choca con 8100 de consola-mwt-one), con Salidas montado en /data/salidas
 ```
 
 ## FASE 1 — capa canonica (bronze + silver + control)
