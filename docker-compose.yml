@@ -73,5 +73,24 @@
       redis:
         condition: service_started
 
+  mcp:
+    build: .
+    command: python -m sicop.mcp_server streamable-http --host 0.0.0.0 --port 9000 --path /mcp
+    volumes:
+      - .:/app
+    environment:
+      POSTGRES_DB: sicop
+      POSTGRES_USER: sicop
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sicop_dev_2026}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+      SICOP_DATA_DIR: /data/salidas
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8450:9000"
+
 volumes:
   pgdata:

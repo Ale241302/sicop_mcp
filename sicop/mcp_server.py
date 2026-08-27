@@ -1,4 +1,4 @@
-﻿"""Servidor MCP de datos SICOP (mcp 2.x / MCPServer).
+"""Servidor MCP de datos SICOP (mcp 2.x / MCPServer).
 
 Correr:
     python -m sicop.mcp_server                 # stdio
@@ -563,5 +563,20 @@ def sicop_bccr_tc(fecha: str = "") -> dict:
 
 
 if __name__ == "__main__":
-    transport = sys.argv[1] if len(sys.argv) > 1 else "stdio"
-    mcp.run(transport=transport)
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Servidor MCP SICOP")
+    ap.add_argument("transport", nargs="?", default="stdio", choices=["stdio", "sse", "streamable-http"])
+    ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--port", type=int, default=9000)
+    ap.add_argument("--path", default="/mcp")
+    ap.add_argument("--json", action="store_true", help="Respuestas JSON planas en vez de SSE")
+    args = ap.parse_args()
+
+    if args.transport == "stdio":
+        mcp.run(transport="stdio")
+    elif args.transport == "streamable-http":
+        mcp.run(transport="streamable-http", host=args.host, port=args.port,
+                streamable_http_path=args.path, json_response=args.json)
+    else:
+        mcp.run(transport=args.transport, host=args.host, port=args.port)
