@@ -24,7 +24,7 @@
       - ${SICOP_DATA_DIR:-../Salidas}:/data/salidas
     environment:
       DJANGO_DEBUG: "1"
-      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,0.0.0.0,sicop.vlinte.work,django
       POSTGRES_DB: sicop
       POSTGRES_USER: sicop
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sicop_dev_2026}
