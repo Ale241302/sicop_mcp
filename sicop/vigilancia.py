@@ -53,7 +53,7 @@ def _meses_objetivo():
     meses = [actual - 1, actual - 2, actual - 3, actual - 4]  # en curso y 3 cerrados
     # 2 rotativos: barridos por el historial (2020..), deterministas por dia
     rot = []
-    hist = list(range(202001, actual - 4))
+    hist = [v for v in range(202001, actual - 4) if 1 <= v % 100 <= 12]
     if hist:
         dia = hoy.toordinal()
         for i in range(2):
