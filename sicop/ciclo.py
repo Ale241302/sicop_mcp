@@ -58,14 +58,31 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
     # 1) vigilancia de reescritura (mes en curso + 3 cerrados + 2 rotativos)
     print("-- vigilancia reescritura --", flush=True)
     cambios = vigilancia.revisar_reescritura(corrida=corrida)
+    recargados = []
     if cambios and reprocesar:
+        from sicop import loader, silver
+
         extractor = os.path.join(settings.SICOP_DATA_DIR, "..", "..", "03_scripts", "harness_actualizado", "sicop_loop.py")
         out = os.path.join(settings.SICOP_DATA_DIR, "..", "..", "salida_recuperacion")
         for m in cambios:
             senales._emit(corrida, "cambio_hash_fuente", "alta", "", None,
                           f"la fuente reescribio {m}", "reprocesar el mes", m)
-            _run([sys.executable, extractor, "--year", m[:4], "--months", m[4:],
+            # anio completo (cache del extractor salta los meses sin cambios)
+            _run([sys.executable, extractor, "--year", m[:4],
                   "--no-vigilancia", "--out", out], cwd=os.path.dirname(extractor))
+        # recargar a Postgres el/los anio(s) afectado(s) y reconstruir silver
+        for y in sorted({m[:4] for m in cambios}):
+            try:
+                r = loader.recargar_anio_afectado(out, settings.SICOP_DATA_DIR, y, corrida=corrida)
+                recargados.append(r)
+            except Exception as e:  # noqa: BLE001
+                print(f"  recarga anio {y} fallo (no bloquea el ciclo): {e}", flush=True)
+        if any(r.get("copiados") for r in recargados):
+            print("-- silver (reconstruir hechos) --", flush=True)
+            try:
+                silver.build_all(corrida)
+            except Exception as e:  # noqa: BLE001
+                print(f"  silver fallo (no bloquea el ciclo): {e}", flush=True)
 
     # 2) consolidar PENDIENTES de resultado_decision
     print("-- consolidar resultados --", flush=True)

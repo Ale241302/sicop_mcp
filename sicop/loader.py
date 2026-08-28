@@ -8,6 +8,7 @@ import csv
 import hashlib
 import logging
 import os
+import shutil
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, date
 
@@ -239,3 +240,52 @@ def discover_files(data_dir):
         if os.path.exists(p):
             jobs.append((model, p))
     return jobs
+
+
+def recargar_anio_afectado(recovery_dir, data_dir, year, corrida=None, umbral=0.5):
+    """Recarga las tablas del anio afectado tras una reescritura de la fuente.
+
+    1. Copia {set}_{year}.csv de recovery_dir a data_dir SOLO si cambio el hash.
+    2. Borra el anio de la tabla (filtro MES_PUBLICACION) y recarga el archivo.
+
+    Guarda de seguridad: si el archivo recuperado es notablemente mas chico que
+    el vigente (< umbral de bytes), NO se borra nada y se reporta la omision
+    (la extraccion pudo salir incompleta).
+    """
+    from django.apps import apps
+
+    copied = []
+    for fn in sorted(os.listdir(recovery_dir)):
+        if not fn.endswith(".csv") or fn.startswith("_"):
+            continue
+        base = fn[:-4]
+        setn, _, y = base.rpartition("_")
+        if "_" not in base or y != year:
+            continue
+        src = os.path.join(recovery_dir, fn)
+        dst = os.path.join(data_dir, fn)
+        if os.path.exists(dst) and sha256_of(dst) == sha256_of(src):
+            continue
+        old_size = os.path.getsize(dst) if os.path.exists(dst) else 0
+        new_size = os.path.getsize(src)
+        if old_size and new_size < umbral * old_size:
+            logger.warning("  %s: recuperado (%dB) << vigente (%dB) — se omite recarga", fn, new_size, old_size)
+            continue
+        shutil.copyfile(src, dst)
+        copied.append((setn, fn))
+
+    resultados = []
+    for setn, fn in copied:
+        model_name = CORE_SETS.get(setn)
+        if not model_name:
+            continue
+        if setn in ("instituciones", "proveedores"):
+            # dimensiones: no particionadas por mes; no se recargan por anio
+            continue
+        model = apps.get_model("sicop", model_name)
+        borradas = model.objects.filter(MES_PUBLICACION__startswith=year).delete()[0]
+        res = load_csv(model_name, os.path.join(data_dir, fn))
+        resultados.append({"set": setn, "borradas_anio": borradas,
+                           "status": res.get("status"), "filas": res.get("rows")})
+        logger.info("  %s: %s (%s filas), borradas %s", setn, res.get("status"), res.get("rows"), borradas)
+    return {"anio": year, "corrida": corrida, "copiados": len(copied), "recargados": resultados}
