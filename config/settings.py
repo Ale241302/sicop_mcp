@@ -117,15 +117,15 @@ from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
     "ciclo-diario-06-00": {
         "task": "sicop.ciclo_diario",
-        "schedule": crontab(hour=6, minute=0),
+        "schedule": crontab(hour=(6, 18), minute=0),
     },
     "vigilancia-reescritura-06-05": {
         "task": "sicop.vigilancia_reescritura",
-        "schedule": crontab(hour=6, minute=5),
+        "schedule": crontab(hour=(6, 18), minute=5),
     },
     "consolidar-resultados-06-15": {
         "task": "sicop.consolidar_resultados",
-        "schedule": crontab(hour=6, minute=15),
+        "schedule": crontab(hour=(6, 18), minute=15),
     },
 }
 
