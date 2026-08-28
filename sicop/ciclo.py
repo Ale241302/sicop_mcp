@@ -67,8 +67,11 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
         for m in cambios:
             senales._emit(corrida, "cambio_hash_fuente", "alta", "", None,
                           f"la fuente reescribio {m}", "reprocesar el mes", m)
-            # anio completo (cache del extractor salta los meses sin cambios)
-            _run([sys.executable, extractor, "--year", m[:4],
+            # anio completo, con --pesados (invitaciones + ordenes_pedido) y --force
+            # (reconstruye el archivo del anio en fresco: captura filas nuevas Y
+            # modificadas/eliminadas; el _cache del extractor solo re-descarga el
+            # mes que cambio).
+            _run([sys.executable, extractor, "--year", m[:4], "--pesados", "--force",
                   "--no-vigilancia", "--out", out], cwd=os.path.dirname(extractor))
         # recargar a Postgres el/los anio(s) afectado(s) y reconstruir silver
         for y in sorted({m[:4] for m in cambios}):
