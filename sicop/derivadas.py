@@ -453,7 +453,9 @@ COLUMNAS_SIEMPRE_VACIAS = {"fecha_rev", "FECHA_REV"}
 
 def ctl_deriva():
     """Mapa de deriva de esquema por ano: presente + llenado por campo (plan Fase 0.2).
-    Regla: ninguna serie multianual se publica sin declarar sus huecos."""
+    Regla: ninguna serie multianual se publica sin declarar sus huecos.
+    Columnas que la fuente declara pero NUNCA llena (0% en todos sus anios) se
+    excluyen del mapa (son columnas muertas, no huecos reales)."""
     import csv
     import os
     from datetime import date
@@ -478,8 +480,8 @@ def ctl_deriva():
 
     print(f"ctl_deriva: {sum(len(v) for v in files.values())} archivos por escanear", flush=True)
     CtlDeriva.objects.all().delete()
-    batch = []
-    total = 0
+    candidatos = []
+    max_pct = {}
     for setn in sorted(files):
         for year in sorted(files[setn]):
             path = files[setn][year]
@@ -505,19 +507,26 @@ def ctl_deriva():
                 print(f"  error {setn}_{year}: {exc}", flush=True)
                 continue
             for h in hdr:
-                if h in COLUMNAS_SIEMPRE_VACIAS:
-                    continue
-                pct = round(counts[h] / n * 100, 1) if n else None
-                batch.append(CtlDeriva(
-                    CONJUNTO=setn, CAMPO=h, ANIO=year, PRESENTE="S",
-                    LLENADO_PCT=pct, ES_CLAVE="S" if h in KEY_FIELDS.get(setn, []) else "N",
-                    TRAMPA=TRAMPAS.get(h), VERIFICADO_EN=date.today().isoformat(),
-                ))
-                total += 1
-            if len(batch) >= BATCH:
-                _flush(CtlDeriva, batch)
+                pct = round(counts[h] / n * 100, 1) if n else 0.0
+                candidatos.append((setn, h, year, pct))
+                max_pct[(setn, h)] = max(max_pct.get((setn, h), 0.0), pct)
+    # solo campos que alguna vez se llenaron (las muertas 0% en todos los anios se omiten)
+    vivos = {k for k, v in max_pct.items() if v > 0}
+    batch = []
+    total = 0
+    for setn, h, year, pct in candidatos:
+        if (setn, h) not in vivos:
+            continue
+        batch.append(CtlDeriva(
+            CONJUNTO=setn, CAMPO=h, ANIO=year, PRESENTE="S",
+            LLENADO_PCT=pct, ES_CLAVE="S" if h in KEY_FIELDS.get(setn, []) else "N",
+            TRAMPA=TRAMPAS.get(h), VERIFICADO_EN=date.today().isoformat(),
+        ))
+        total += 1
+        if len(batch) >= BATCH:
+            _flush(CtlDeriva, batch)
     _flush(CtlDeriva, batch)
-    print(f"ctl_deriva: {total} filas (conjunto x campo x anio)", flush=True)
+    print(f"ctl_deriva: {total} filas (conjunto x campo x anio) + {len(max_pct) - len(vivos)} columnas muertas excluidas", flush=True)
 
 
 _UNIDADES = {
