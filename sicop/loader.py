@@ -231,8 +231,11 @@ def discover_files(data_dir):
             p = os.path.join(data_dir, f"{set_name}_{year}.csv")
             if os.path.exists(p):
                 jobs.append((model, p))
-    # invitaciones 2022 vive fuera de Salidas con nombre especial
+    # invitaciones 2022 vive en el padre de Salidas (layout local) o dentro de
+    # Salidas (layout del zip en el VPS): se busca en ambos
     inv22 = os.path.join(os.path.dirname(os.path.abspath(data_dir)), "invitaciones_2022-002.csv")
+    if not os.path.exists(inv22):
+        inv22 = os.path.join(data_dir, "invitaciones_2022-002.csv")
     if os.path.exists(inv22):
         jobs.append(("SicopInvitaciones", inv22))
     for set_name, model in GOLD_SETS.items():
