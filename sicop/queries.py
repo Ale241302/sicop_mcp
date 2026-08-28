@@ -100,7 +100,7 @@ def ficha_proveedor(cedula):
     if tc_dia:
         extra.append(f"monedas no CRC de cartera convertidas con el TC oficial del dia ({tc_dia}) cuando hay MONTO_OTRAS_MONEDAS_ORIGEN")
     else:
-        extra.append("monedas no CRC en cartera sin convertir (sin TC del dia guardado)")
+        extra.append("monedas no CRC en cartera sin convertir (fallo consultar el TC del dia)")
     return to_plain({
         "cedula": cedula,
         "nombre": perfil["NOMBRE_PROVEEDOR"] if perfil else None,
@@ -532,7 +532,7 @@ def ordenes_proveedor(cedula, anio=None, limit=1000):
     if tc_dia and n_otras:
         extra.append(f"monedas no CRC convertidas con el TC oficial del dia ({tc_dia}) -> TOTAL_ORDEN_CRC_EST por orden y total_otras_monedas_crc_est")
     elif n_otras:
-        extra.append("monedas no CRC sin convertir (sin TC del dia guardado)")
+        extra.append("monedas no CRC sin convertir (fallo consultar el TC del dia)")
     return to_plain({
         "cedula": cedula,
         "anio": anio,

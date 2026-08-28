@@ -132,8 +132,11 @@ def tipo_cambio(fecha=None):
 def tc_del_dia(fecha=None):
     """TC CRC/USD oficial del dia (compra) guardado en ctl_bccr_tc.
 
-    Para conversiones monetarias en las respuestas del MCP/API. None si no hay
-    fila guardada para la fecha.
+    Para conversiones monetarias en las respuestas del MCP/API. Si NO hay fila
+    guardada para la fecha (p.ej. antes del primer ciclo o ciclo fallido),
+    consulta y guarda en el momento (fallback on-demand); una vez guardado,
+    el resto de llamadas del dia leen de la tabla y el ciclo solo lo refresca.
+    None solo si la consulta en vivo tambien falla.
     """
     from sicop.models import CtlBccrTc
 
@@ -141,4 +144,9 @@ def tc_del_dia(fecha=None):
     obj = CtlBccrTc.objects.filter(fecha=fecha).first()
     if obj and obj.tc_compra is not None:
         return float(obj.tc_compra)
-    return None
+    try:
+        d = guardar_tc_del_dia(fecha)
+        return d.get("tc_bccr_compra")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("tc_del_dia fallo on-demand: %s", e)
+        return None
