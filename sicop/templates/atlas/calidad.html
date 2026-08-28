@@ -11,7 +11,7 @@
 <div style="max-height:400px;overflow:auto">
 <table><tr><th>Conjunto</th><th>Campo</th><th>Año</th><th class="r">Llenado</th></tr>
 {% for d in deriva %}<tr><td>{{ d.CONJUNTO }}</td><td>{{ d.CAMPO }}</td><td>{{ d.ANIO }}</td>
-<td class="r"><span class="{% if d.LLENADO_PCT < 50 %}bad{% elif d.LLENADO_PCT < 95 %}wa{% else %}ok{% endif %}">{{ d.LLENADO_PCT|default:"—" }}%</span></td></tr>{% endfor %}
+<td class="r">{% if not d.LLENADO_PCT %}<span class="badge wa">hueco</span>{% else %}<span class="{% if d.LLENADO_PCT < 50 %}bad{% elif d.LLENADO_PCT < 95 %}wa{% else %}ok{% endif %}">{{ d.LLENADO_PCT|floatformat:1 }}%</span>{% endif %}</td></tr>{% endfor %}
 </table></div>
 
 <h2>Tests como gate</h2>

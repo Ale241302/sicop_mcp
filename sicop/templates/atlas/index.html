@@ -26,13 +26,15 @@
 </table>
 {% else %}<p class="bad">Sin tests ejecutados todavía — corré <code>python manage.py fase1 --solo-tests</code>.</p>{% endif %}
 
-<h2>Deriva de esquema (huecos por año)</h2>
+<h2>Huecos declarados (campos que la fuente deja sin llenar en ciertos años)</h2>
 {% if deriva %}
+<div class="card">
 <table><tr><th>Conjunto</th><th>Campo</th><th>Año</th><th>Llenado</th></tr>
 {% for d in deriva %}<tr><td>{{ d.CONJUNTO }}</td><td>{{ d.CAMPO }}</td><td>{{ d.ANIO }}</td>
-<td><span class="{% if d.LLENADO_PCT < 50 %}bad{% elif d.LLENADO_PCT < 95 %}wa{% else %}ok{% endif %}">{{ d.LLENADO_PCT|default:"—" }}%</span></td></tr>{% endfor %}
+<td>{% if not d.LLENADO_PCT %}<span class="badge wa">hueco</span>{% else %}<span class="{% if d.LLENADO_PCT < 50 %}bad{% elif d.LLENADO_PCT < 95 %}wa{% else %}ok{% endif %}">{{ d.LLENADO_PCT|floatformat:1 }}%</span>{% endif %}</td></tr>{% endfor %}
 </table>
-<p class="wa" style="font-size:13px">Regla: ninguna serie multianual se publica sin declarar sus huecos.</p>
+</div>
+<p class="wa" style="font-size:13px"><b>hueco</b> = el campo existe en el esquema pero la fuente no lo publica ese año. Es una declaración, no un error: ninguna serie multianual se publica sin declarar sus huecos.</p>
 {% endif %}
 
 <h2>Señales del día (cara del harness)</h2>
