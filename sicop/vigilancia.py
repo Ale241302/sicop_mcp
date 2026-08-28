@@ -49,21 +49,25 @@ def _head(aaaamm):
 def _meses_en_juego(dias=180, max_meses=4):
     """Meses de apertura de procedimientos EN JUEGO: apertura reciente y SIN
     adjudicacion firme aun. Se vigilan TODOS los dias hasta que el procedimiento
-    tenga su adjudicacion en firme (ahi sale del set por el exclude)."""
+    tenga su adjudicacion en firme (ahi sale del set por el NOT EXISTS)."""
     from datetime import timedelta
 
-    from django.db.models import Count
+    from django.db.models import Count, Exists, OuterRef
     from django.db.models.functions import TruncMonth
     from django.utils import timezone
 
     from .models import SicopAdjudicacionesFirme, SicopCarteles
 
-    firmes = SicopAdjudicacionesFirme.objects.values("NRO_SICOP")
-    desde = timezone.now() - timedelta(days=dias)
+    ahora = timezone.now()
+    desde = ahora - timedelta(days=dias)
+    tiene_firme = Exists(
+        SicopAdjudicacionesFirme.objects.filter(NRO_SICOP=OuterRef("NRO_SICOP"))
+    )
     filas = (
         SicopCarteles.objects
-        .filter(FECHAH_APERTURA__gte=desde)
-        .exclude(NRO_SICOP__in=firmes)
+        .filter(FECHAH_APERTURA__gte=desde, FECHAH_APERTURA__lte=ahora)
+        .annotate(tiene_firme=tiene_firme)
+        .filter(tiene_firme=False)
         .annotate(mes=TruncMonth("FECHAH_APERTURA"))
         .values("mes")
         .annotate(n=Count("id"))
