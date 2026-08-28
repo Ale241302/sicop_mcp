@@ -127,3 +127,18 @@ def tipo_cambio(fecha=None):
     if obj:
         return _a_dict(obj)
     return guardar_tc_del_dia(fecha)
+
+
+def tc_del_dia(fecha=None):
+    """TC CRC/USD oficial del dia (compra) guardado en ctl_bccr_tc.
+
+    Para conversiones monetarias en las respuestas del MCP/API. None si no hay
+    fila guardada para la fecha.
+    """
+    from sicop.models import CtlBccrTc
+
+    fecha = fecha or date.today()
+    obj = CtlBccrTc.objects.filter(fecha=fecha).first()
+    if obj and obj.tc_compra is not None:
+        return float(obj.tc_compra)
+    return None

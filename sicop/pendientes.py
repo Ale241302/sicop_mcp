@@ -50,9 +50,10 @@ def tc_implicito_por_mes():
 
 
 def p1_conversion_cartera():
-    """Convierte MONTO_OTRAS_MONEDAS_ORIGEN a CRC con TC implicito anual de la fuente.
+    """Convierte MONTO_OTRAS_MONEDAS_ORIGEN a CRC.
 
-    TC implicito = mediana anual de (MONTO_ADJU_LINEA_CRC / MONTO_ADJU_LINEA_USD) en adjudicaciones.
+    Con el TC oficial del dia (ctl_bccr_tc) cuando esta guardado; tambien se
+    reporta el TC implicito anual de la fuente (mediana CRC/USD adjudicaciones).
     """
     from django.db.models import Q
 
@@ -63,27 +64,44 @@ def p1_conversion_cartera():
         tc_anual[r["ANO"]].append(r["MONTO_ADJU_LINEA_CRC"] / r["MONTO_ADJU_LINEA_USD"])
     tc = {a: float(statistics.median(v)) for a, v in tc_anual.items() if v}
 
+    try:
+        from sicop.bccr import tc_del_dia
+        tc_dia = tc_del_dia()
+    except Exception:  # noqa: BLE001
+        tc_dia = None
+
     out = []
     for r in GoldCarteraProveedor.objects.exclude(MONTO_OTRAS_MONEDAS_ORIGEN__isnull=True).values(
             "CEDULA_PROVEEDOR", "NOMBRE_PROVEEDOR", "ANIO_EJECUCION", "MONTO_OTRAS_MONEDAS_ORIGEN",
             "MONTO_EJECUTADO_CRC", "MONEDAS"):
         a = r["ANIO_EJECUCION"]
         t = tc.get(str(a))
-        convertido = round(float(r["MONTO_OTRAS_MONEDAS_ORIGEN"] or 0) * t, 2) if t else None
+        om = float(r["MONTO_OTRAS_MONEDAS_ORIGEN"] or 0)
+        ejecutado = float(r["MONTO_EJECUTADO_CRC"] or 0)
+        convertido = round(om * t, 2) if t else None
+        convertido_dia = round(om * tc_dia, 2) if tc_dia else None
         out.append({
             "cedula": r["CEDULA_PROVEEDOR"], "nombre": r["NOMBRE_PROVEEDOR"], "anio": a,
-            "otras_monedas_origen": float(r["MONTO_OTRAS_MONEDAS_ORIGEN"] or 0),
+            "otras_monedas_origen": om,
             "tc_implicito": round(t, 2) if t else None,
             "otras_monedas_crc": convertido,
-            "ejecutado_crc": float(r["MONTO_EJECUTADO_CRC"] or 0),
-            "ejecutado_total_estimado_crc": round(float(r["MONTO_EJECUTADO_CRC"] or 0) + (convertido or 0), 2),
+            "tc_oficial_dia": tc_dia,
+            "otras_monedas_crc_oficial_dia": convertido_dia,
+            "ejecutado_crc": ejecutado,
+            "ejecutado_total_estimado_crc": round(ejecutado + (convertido or 0), 2),
+            "ejecutado_total_estimado_oficial_dia_crc": round(ejecutado + (convertido_dia or 0), 2),
         })
-    out.sort(key=lambda x: -(x["ejecutado_total_estimado_crc"] or 0))
+    out.sort(key=lambda x: -(x["ejecutado_total_estimado_oficial_dia_crc"] or x["ejecutado_total_estimado_crc"] or 0))
+    nota = ("TC implicito de la fuente (mediana anual CRC/USD de adjudicaciones) + "
+            "TC oficial del dia (ctl_bccr_tc, serie 317) cuando esta guardado.")
+    if not tc_dia:
+        nota += " Sin TC oficial del dia guardado: falta correr el ciclo (guardar_tc_del_dia)."
     return {
         "tc_implicito_anual": {k: round(v, 2) for k, v in sorted(tc.items())},
+        "tc_oficial_dia": tc_dia,
         "conversiones": out[:200],
         "total_filas": len(out),
-        "sobre": {"nota": "TC implicito de la fuente (mediana anual CRC/USD de adjudicaciones). BCCR oficial pendiente de gate (Directriz 044-H)."},
+        "sobre": {"nota": nota},
     }
 
 

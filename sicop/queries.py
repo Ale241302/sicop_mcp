@@ -38,6 +38,15 @@ def to_plain(value):
     return value
 
 
+def _tc_del_dia():
+    """TC CRC/USD oficial del dia guardado (ctl_bccr_tc). None si no hay."""
+    try:
+        from .bccr import tc_del_dia
+        return tc_del_dia()
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def resumen():
     import inspect
 
@@ -76,17 +85,33 @@ def ficha_proveedor(cedula):
     cartera = list(GoldCarteraProveedor.objects.filter(CEDULA_PROVEEDOR=cedula).order_by("ANIO_EJECUCION"))
     desempeno = list(GoldDesempenoProveedor.objects.filter(CEDULA_PROVEEDOR=cedula))
     familias = list(GoldDesempenoPorFamilia.objects.filter(CEDULA_PROVEEDOR=cedula, MUESTRA_SUFICIENTE="S").order_by("-LINEAS_RECIBIDAS")[:10])
+    tc_dia = _tc_del_dia()
+    cartera_plain = []
+    for c in cartera:
+        d = to_plain(c)
+        om = d.get("MONTO_OTRAS_MONEDAS_ORIGEN")
+        base = float(d.get("MONTO_EJECUTADO_CRC") or 0)
+        if tc_dia and om:
+            d["EJECUTADO_TOTAL_ESTIMADO_CRC"] = round(base + float(om) * tc_dia, 2)
+            d["TC_OFICIAL_DIA_USADO"] = tc_dia
+            d["MONTO_OTRAS_MONEDAS_CRC_EST"] = round(float(om) * tc_dia, 2)
+        cartera_plain.append(d)
+    extra = ["adjudicaciones = captacion; cartera = ejecucion real; NO comparar niveles entre si"]
+    if tc_dia:
+        extra.append(f"monedas no CRC de cartera convertidas con el TC oficial del dia ({tc_dia}) cuando hay MONTO_OTRAS_MONEDAS_ORIGEN")
+    else:
+        extra.append("monedas no CRC en cartera sin convertir (sin TC del dia guardado)")
     return to_plain({
         "cedula": cedula,
         "nombre": perfil["NOMBRE_PROVEEDOR"] if perfil else None,
         "perfil": perfil["PERFIL_PROV"] if perfil else None,
         "adjudicaciones_por_anio": adj,
-        "cartera_ejecucion_vs_captacion": cartera,
+        "cartera_ejecucion_vs_captacion": cartera_plain,
+        "tc_oficial_dia": tc_dia,
         "desempeno": desempeno,
         "familias_top": familias,
         "sobre": sobre("mixto: captacion (adjudicaciones) + ejecucion (cartera) + entrega (desempeno)", COBERTURA_CRUCE,
-                       extra=["adjudicaciones = captacion; cartera = ejecucion real (solo CRC); NO comparar niveles entre si",
-                              "monedas no CRC en cartera sin convertir (BCCR pendiente)"]),
+                       extra=extra),
     })
 
 
@@ -199,7 +224,7 @@ COBERTURA_CRUCE = 0.626
 CAVEATS_BASE = [
     "cobertura del cruce oferta x oferente: 62,6% (1 mes 8%, acumulado)",
     "2026 parcial (corte 2026-08-25); '2026' en adjudicaciones/contratos/recepciones es actividad observada, no procedimientos nacidos 2026",
-    "conversiones de moneda usan TIPO_CAMBIO_CRC de la propia fila; ordenes_pedido en monedas no CRC no convertidas (BCCR pendiente)",
+    "conversiones de moneda usan TIPO_CAMBIO_CRC de la propia fila; monedas no CRC convertidas con el TC oficial del dia cuando esta guardado (ctl_bccr_tc)",
     "ninguna serie multianual se publica sin declarar sus huecos: consultar /api/v1/ctl-deriva (deriva por anio)",
     "lineas_* / ofertas / proveedores / recepciones / recursos / ordenes_pedido en carga (recuperacion desde Observatorio)",
 ]
@@ -483,25 +508,43 @@ def proveedor_dim(cedula):
 
 
 def ordenes_proveedor(cedula, anio=None, limit=1000):
-    """Ordenes de pedido de un proveedor (nivel EJECUCION). SOLO CRC en totales sumables."""
+    """Ordenes de pedido de un proveedor (nivel EJECUCION). Total CRC sumable;
+    monedas no CRC convertidas con el TC oficial del dia cuando esta disponible."""
     from .models import SicopOrdenesPedido
 
     qs = SicopOrdenesPedido.objects.filter(CEDULAPROVEEDOR=cedula)
     if anio:
         qs = qs.filter(FECHA_ELABORACION_ORDEN__year=anio)
     rows = list(qs.order_by("-FECHA_ELABORACION_ORDEN")[:limit])
+    tc_dia = _tc_del_dia()
     n_crc = sum(1 for r in rows if r.MONEDA_ORDEN == "CRC")
+    otras = [r for r in rows if (r.MONEDA_ORDEN or "") not in ("", "CRC")]
+    n_otras = len(otras)
     total_crc = sum((r.TOTAL_ORDEN or 0) for r in rows if r.MONEDA_ORDEN == "CRC")
+    total_otras_convertido = (float(sum((r.TOTAL_ORDEN or 0) for r in otras)) * tc_dia) if (tc_dia and n_otras) else None
+    ordenes_plain = []
+    for r in rows:
+        d = to_plain(r)
+        if tc_dia and (r.MONEDA_ORDEN or "") not in ("", "CRC") and r.TOTAL_ORDEN:
+            d["TOTAL_ORDEN_CRC_EST"] = round(float(r.TOTAL_ORDEN) * tc_dia, 2)
+        ordenes_plain.append(d)
+    extra = ["TOTAL_ORDEN esta replicado por linea: totales solo deduplicados por NRO_ORDEN"]
+    if tc_dia and n_otras:
+        extra.append(f"monedas no CRC convertidas con el TC oficial del dia ({tc_dia}) -> TOTAL_ORDEN_CRC_EST por orden y total_otras_monedas_crc_est")
+    elif n_otras:
+        extra.append("monedas no CRC sin convertir (sin TC del dia guardado)")
     return to_plain({
         "cedula": cedula,
         "anio": anio,
         "n_ordenes_muestra": len(rows),
         "n_crc": n_crc,
+        "n_otras_monedas": n_otras,
         "total_orden_crc_muestra": total_crc,
-        "ordenes": rows,
-        "sobre": sobre("ejecucion (ordenes de pedido)", None,
-                       extra=["TOTAL_ORDEN esta replicado por linea: totales solo deduplicados por NRO_ORDEN",
-                              "monedas no CRC sin convertir (BCCR pendiente)"]),
+        "total_otras_monedas_crc_est": round(total_otras_convertido, 2) if total_otras_convertido is not None else None,
+        "total_orden_crc_estimado_muestra": round(total_crc + total_otras_convertido, 2) if total_otras_convertido is not None else total_crc,
+        "tc_oficial_dia": tc_dia,
+        "ordenes": ordenes_plain,
+        "sobre": sobre("ejecucion (ordenes de pedido)", None, extra=extra),
     })
 
 
