@@ -72,23 +72,39 @@ def corrida_now():
 
 
 def fact_requerimiento(corrida):
-    """Grano: procedimiento x linea x partida (el cartel)."""
+    """Grano: procedimiento x linea x partida (el cartel).
+
+    La fuente re-publica el cartel de procedimientos abiertos en varios meses
+    (snapshots mensuales). Se deduplica por clave quedandose con el snapshot
+    MAS RECIENTE (max MES_PUBLICACION) -> el fact es el cartel canonico, una
+    fila por linea, sin duplicados cross-mes.
+    """
     FactRequerimiento.objects.all().delete()
     now = corrida_now()
     batch = []
-    for r in SicopLineasCartel.objects.values().iterator():
+    visto = set()
+    qs = (SicopLineasCartel.objects
+          .order_by("NRO_SICOP", "NUMERO_LINEA", "NUMERO_PARTIDA", "-MES_PUBLICACION")
+          .values().iterator())
+    for r in qs:
+        n_linea = _nl(r.get("NUMERO_LINEA"))
+        n_partida = _nl(r.get("NUMERO_PARTIDA"))
+        clave = (r.get("NRO_SICOP"), n_linea, n_partida)
+        if clave in visto:
+            continue
+        visto.add(clave)
         cod_cl = _cl(r.get("CODIGO_IDENTIFICACION"))
         pu = r.get("PRECIO_UNITARIO_ESTIMADO")
         mon = r.get("TIPO_MONEDA")
         tc = r.get("TIPO_CAMBIO_CRC")
         obj = FactRequerimiento(
-            NRO_SICOP=r.get("NRO_SICOP"), NUMERO_LINEA=_nl(r.get("NUMERO_LINEA")),
-            NUMERO_PARTIDA=_nl(r.get("NUMERO_PARTIDA")), CODIGO_CL=cod_cl,
+            NRO_SICOP=r.get("NRO_SICOP"), NUMERO_LINEA=n_linea,
+            NUMERO_PARTIDA=n_partida, CODIGO_CL=cod_cl,
             CODIGO_PRODUCTO=r.get("CODIGO_IDENTIFICACION"), DESC_LINEA=r.get("DESC_LINEA"),
             CANTIDAD_SOLICITADA=r.get("CANTIDAD_SOLICITADA"), PU_ESTIMADO_ORIG=pu,
             MONEDA_ESTIMADO=mon, TC_ESTIMADO=tc, PU_ESTIMADO_CRC=_crc(pu, mon, tc),
             OBSERVADO_DESDE=now, ES_VIGENTE=True,
-            HASH_FILA=_h(r.get("NRO_SICOP"), r.get("NUMERO_LINEA"), r.get("NUMERO_PARTIDA"), cod_cl, pu, mon, tc),
+            HASH_FILA=_h(r.get("NRO_SICOP"), n_linea, n_partida, cod_cl, pu, mon, tc),
             CORRIDA_ID=corrida,
         )
         batch.append(obj)
