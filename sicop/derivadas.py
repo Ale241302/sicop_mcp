@@ -455,8 +455,8 @@ def ctl_deriva():
     from .models import CtlDeriva
 
     dirs = [settings.SICOP_DATA_DIR]
-    rec = r"C:\Users\ale13\OneDrive\Escritorio\sicop\salida_recuperacion"
-    if os.path.isdir(rec):
+    rec = getattr(settings, "SICOP_RECOVERY_DIR", None)
+    if rec and os.path.isdir(rec):
         dirs.append(rec)
 
     files = {}
