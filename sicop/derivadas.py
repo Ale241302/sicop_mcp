@@ -442,7 +442,13 @@ TRAMPAS = {
     "NRO_LINEA": "vs NUMERO_LINEA en cartel - normalizar a entero-string",
     "monto_aumentado": "contaminado: numeros de contrato en columna de monto",
     "precio": "contaminado: numeros de contrato en columna de monto (lineas_recibidas)",
+    "fecha_rev": "columna que la fuente declara pero NUNCA llena (0% en todos los anios) - no es un hueco real",
+    "FECHA_REV": "columna que la fuente declara pero NUNCA llena (0% en todos los anios) - no es un hueco real",
 }
+
+# Columnas que la fuente declara en su cabecera pero nunca llena (0% en todos
+# los anios): se excluyen del mapa de deriva para no ensuciarlo de '—%'.
+COLUMNAS_SIEMPRE_VACIAS = {"fecha_rev", "FECHA_REV"}
 
 
 def ctl_deriva():
@@ -499,6 +505,8 @@ def ctl_deriva():
                 print(f"  error {setn}_{year}: {exc}", flush=True)
                 continue
             for h in hdr:
+                if h in COLUMNAS_SIEMPRE_VACIAS:
+                    continue
                 pct = round(counts[h] / n * 100, 1) if n else None
                 batch.append(CtlDeriva(
                     CONJUNTO=setn, CAMPO=h, ANIO=year, PRESENTE="S",
