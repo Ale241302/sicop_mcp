@@ -1,60 +1,56 @@
 """Tipo de cambio BCCR (plan F5 / P1): serie 317 compra / 318 venta.
 
+Fuente oficial: el paquete `bccr` (nuevo SDDE del BCCR, 2026), que usa la API
+apim.bccr.fi.cr/SDDE con su token publico embebido — NO requiere BCCR_TOKEN.
+
 El TC del dia se consulta UNA vez en la manana (ciclo diario -> guardar_tc_del_dia)
 y se guarda en ctl_bccr_tc. El resto del dia el MCP y la API leen de ahi
 (tipo_cambio), sin volver a la API del BCCR.
 
-Requiere BCCR_TOKEN + BCCR_EMAIL en .env (token gratuito del BCCR). Sin token,
-guarda el TC implicito de la fuente (mediana anual CRC/USD de adjudicaciones)
-y lo marca como tal — nunca asume CRC ni mezcla monedas.
+Si el SDDE falla (sin internet / API caida), guarda el TC implicito de la fuente
+(mediana anual CRC/USD de adjudicaciones) y lo marca como tal — nunca asume CRC
+ni mezcla monedas.
 """
 import json
 import logging
-import urllib.parse
-import urllib.request
-import xml.etree.ElementTree as ET
-from datetime import date
+from datetime import date, timedelta
 
-from django.conf import settings
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-WSDL = ("https://gee.bccr.fi.cr/Indicadores/Suscripciones/WS/wsindicadoreseconomicos.asmx/"
-        "ObtenerIndicadoresEconomicosXML")
-
-FUENTE_BCCR = "BCCR oficial (317/318)"
+FUENTE_BCCR = "BCCR oficial (SDDE 317/318)"
 FUENTE_IMPLICITO = "implicito_fuente"
 
 
-def _hay_token():
-    return bool(getattr(settings, "BCCR_TOKEN", "") or "")
+def tc_bccr_sdde(fecha=None, indicador="317", dias_ventana=12):
+    """TC oficial del BCCR (nuevo SDDE) para la fecha.
 
-
-def tc_bccr(fecha=None, indicador="317"):
-    """TC del BCCR para la fecha. None si no hay token o falla."""
-    fecha = fecha or date.today()
-    token = getattr(settings, "BCCR_TOKEN", "") or ""
-    email = getattr(settings, "BCCR_EMAIL", "") or ""
-    if not token:
-        return None
-    params = urllib.parse.urlencode({
-        "Indicador": indicador, "FechaInicio": fecha.isoformat(),
-        "FechaFinal": fecha.isoformat(), "Nombre": "N", "SubNiveles": "N",
-        "CorreoElectronico": email, "Token": token,
-    })
-    url = f"{WSDL}?{params}"
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    Trae una ventana de dias hasta `fecha` y devuelve el ultimo valor publicado
+    <= fecha (si hoy aun no publica, el mas reciente disponible). None si falla.
+    """
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            xml = r.read().decode("utf-8", errors="replace")
-        root = ET.fromstring(xml)
-        for num in root.iter():
-            if num.tag.endswith("NUM_VALOR"):
-                return float(num.text)
+        from bccr import SW
+    except Exception:  # noqa: BLE001
+        logger.warning("paquete bccr no disponible")
+        return None
+    fecha = fecha or date.today()
+    inicio = fecha - timedelta(days=dias_ventana)
+    try:
+        serie = SW.descargar_indicador(
+            indicador,
+            FechaInicio=inicio.isoformat().replace("-", "/"),
+            FechaFinal=fecha.isoformat().replace("-", "/"),
+        )
     except Exception as e:  # noqa: BLE001
-        logger.warning("BCCR fallo: %s", e)
-    return None
+        logger.warning("BCCR SDDE fallo (%s): %s", indicador, e)
+        return None
+    if serie is None or serie.empty:
+        return None
+    serie = serie.dropna()
+    if serie.empty:
+        return None
+    return float(serie.iloc[-1])
 
 
 def tc_implicito(fecha):
@@ -76,15 +72,16 @@ def guardar_tc_del_dia(fecha=None, corrida=None):
     """Consulta el TC del dia UNA vez y lo guarda en ctl_bccr_tc (upsert por fecha).
 
     Llamada desde el ciclo diario (manana). Devuelve el dict del TC guardado.
+    Fuente: BCCR oficial (SDDE) si responde; si no, implicito de la fuente.
     """
     from sicop.models import CtlBccrTc
 
     fecha = fecha or date.today()
-    compra = tc_bccr(fecha, "317")
-    venta = tc_bccr(fecha, "318")
+    compra = tc_bccr_sdde(fecha, "317")
+    venta = tc_bccr_sdde(fecha, "318")
     if compra:
         fuente = FUENTE_BCCR
-        sobre = {"moneda": "CRC/USD"}
+        sobre = {"moneda": "CRC/USD", "serie_compra": "317", "serie_venta": "318"}
     else:
         compra = tc_implicito(fecha)
         fuente = FUENTE_IMPLICITO

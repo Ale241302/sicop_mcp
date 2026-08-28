@@ -1418,7 +1418,7 @@ class CtlBccrTc(models.Model):
     """ctl_bccr_tc: TC CRC/USD del dia, consultado UNA vez en la manana y guardado.
 
     El MCP y la API leen de aca el resto del dia (no consultan la API del BCCR
-    en cada pregunta). Fuente: 'BCCR oficial (317)' si hay BCCR_TOKEN/EMAIL,
+    en cada pregunta). Fuente: 'BCCR oficial (SDDE 317/318)' via el paquete bccr,
     si no 'implicito_fuente' (mediana CRC/USD de la fuente) marcado como tal.
     """
     fecha = models.DateField(unique=True)
