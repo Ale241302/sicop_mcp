@@ -46,6 +46,15 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
     control.registrar_corrida(corrida, "ciclo_diario", notas="FASE 2")
     print(f"== ciclo diario {corrida} ==", flush=True)
 
+    # 0) TC del dia: consultar UNA vez, guardar en ctl_bccr_tc (el resto del
+    #    dia el MCP/API leen de ahi, sin volver a la API del BCCR)
+    print("-- tipo de cambio del dia --", flush=True)
+    try:
+        from sicop import bccr
+        bccr.guardar_tc_del_dia(corrida=corrida)
+    except Exception as e:  # noqa: BLE001
+        print(f"  bccr fallo (no bloquea el ciclo): {e}", flush=True)
+
     # 1) vigilancia de reescritura (mes en curso + 3 cerrados + 2 rotativos)
     print("-- vigilancia reescritura --", flush=True)
     cambios = vigilancia.revisar_reescritura(corrida=corrida)

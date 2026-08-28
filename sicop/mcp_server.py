@@ -555,7 +555,7 @@ def sicop_cgr_buscar(termino: str, page: int = 1, limit: int = 15) -> dict:
 
 @mcp.tool()
 def sicop_bccr_tc(fecha: str = "") -> dict:
-    """Tipo de cambio CRC/USD para una fecha (YYYY-MM-DD): BCCR oficial si hay token, si no el implicito de la fuente."""
+    """Tipo de cambio CRC/USD del dia guardado en ctl_bccr_tc (se consulta UNA vez en la manana en el ciclo diario y se lee de ahi el resto del dia; no golpea la API del BCCR por pregunta). BCCR oficial si hay token, si no el implicito de la fuente, marcado como tal."""
     from datetime import date
     from sicop.bccr import tipo_cambio
 

@@ -1411,3 +1411,25 @@ class RegistroRespuesta(models.Model):
         db_table = 'registro_respuesta'
         indexes = [models.Index(fields=('herramienta',)), models.Index(fields=('timestamp',))]
 
+
+# --- FASE 5: tipo de cambio del dia guardado (BCCR oficial si hay token, si no implicito) ---
+
+class CtlBccrTc(models.Model):
+    """ctl_bccr_tc: TC CRC/USD del dia, consultado UNA vez en la manana y guardado.
+
+    El MCP y la API leen de aca el resto del dia (no consultan la API del BCCR
+    en cada pregunta). Fuente: 'BCCR oficial (317)' si hay BCCR_TOKEN/EMAIL,
+    si no 'implicito_fuente' (mediana CRC/USD de la fuente) marcado como tal.
+    """
+    fecha = models.DateField(unique=True)
+    tc_compra = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    tc_venta = models.DecimalField(max_digits=18, decimal_places=4, null=True, blank=True)
+    fuente = models.TextField(blank=True, null=True)
+    sobre = models.TextField(blank=True, null=True)
+    corrida = models.TextField(blank=True, null=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ctl_bccr_tc'
+        ordering = ['-fecha']
+
