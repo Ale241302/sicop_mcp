@@ -11,4 +11,5 @@ urlpatterns = [
     path("procedimiento/<str:nro>/", views.procedimiento, name="atlas-procedimiento"),
     path("mercado/<str:familia>/", views.mercado, name="atlas-mercado"),
     path("calidad/", views.calidad, name="atlas-calidad"),
+    path("mcp/", views.mcp_docs, name="atlas-mcp"),
 ]

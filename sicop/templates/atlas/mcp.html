@@ -1,0 +1,45 @@
+{% extends "atlas/base.html" %}
+{% block title %}Documentación MCP · Atlas SICOP{% endblock %}
+{% block body %}
+<h1>Servidor MCP · SICOP</h1>
+<p>Conector MCP para Claude.ai (y otros clientes MCP) con <b>{{ total_tools }} tools</b> sobre el corpus canónico de contratación pública de Costa Rica 2020–2026.</p>
+
+<div class="card">
+<h2 style="margin-top:0">Cómo conectarse</h2>
+<table>
+<tr><th>Parámetro</th><th>Valor</th></tr>
+<tr><td>Nombre</td><td>sicop</td></tr>
+<tr><td>URL del servidor MCP remoto</td><td><code>https://sicop.vlinte.work/mcp</code></td></tr>
+<tr><td>OAuth</td><td>sin auth por ahora</td></tr>
+<tr><td>Protocolo</td><td>streamable-http (MCP 2.x)</td></tr>
+</table>
+<p class="sobre"><b>Cómo usarlo en Claude.ai</b> Configuración → Conectores → agregar servidor remoto → pegar la URL → guardar. Luego preguntale a Claude con lenguaje natural (ver ejemplos).</p>
+</div>
+
+<h2>Ejemplos de preguntas</h2>
+<div class="card">
+<table>
+<tr><th>Qué pedís</th><th>Pregunta natural</th></tr>
+{% for q, ej in ejemplos %}<tr><td>{{ q }}</td><td>{{ ej }}</td></tr>{% endfor %}
+</table>
+</div>
+
+<h2>Tiempos de respuesta (benchmark en vivo)</h2>
+<div class="card">
+<table>
+<tr><th>Tool</th><th>ms</th></tr>
+{% for name, ms in bench.items %}<tr><td>{{ name }}</td><td class="r">{% if ms %}{{ ms }} ms{% else %}—{% endif %}</td></tr>{% endfor %}
+</table>
+<p class="sobre"><b>Nota</b> Medidos contra el servidor público. Consultas pesadas (ranking, cartera) pueden tardar más; el resumen y el TC del día están cacheados.</p>
+</div>
+
+<h2>Todas las tools ({{ total_tools }})</h2>
+<div class="card">
+<table>
+<tr><th>Tool</th><th>Parámetros</th><th>Qué hace</th></tr>
+{% for t in tools %}<tr><td><code>{{ t.name }}</code></td><td>{{ t.params }}</td><td>{{ t.desc }}</td></tr>{% endfor %}
+</table>
+</div>
+
+<p class="sobre"><b>Reglas de medición</b> Toda cifra declara su nivel: captación (adjudicaciones), ejecución (órdenes de pedido) o entrega (recepciones). Monedas: CRC | USD | EUR | JPY | GBP — nunca sumar sin convertir. Los huecos de datos están declarados en la deriva.</p>
+{% endblock %}

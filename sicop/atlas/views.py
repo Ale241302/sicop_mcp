@@ -107,6 +107,67 @@ def calidad(request):
     return render(request, "atlas/calidad.html", ctx)
 
 
+def mcp_docs(request):
+    """Documentacion del servidor MCP: como conectarse, tools, ejemplos y tiempos."""
+    from django.core.cache import cache
+    from sicop.mcp_server import mcp
+
+    tools = []
+    for t in mcp._tool_manager.list_tools():
+        props = (t.parameters or {}).get("properties", {})
+        required = set((t.parameters or {}).get("required", []) or [])
+        params = ", ".join(
+            f"{k}{'*' if k in required else ''}" for k in props.keys()
+        )
+        tools.append({"name": t.name, "desc": t.description or "", "params": params})
+
+    clave = "sicop:mcp:bench:v1"
+    try:
+        bench = cache.get(clave)
+    except Exception:  # noqa: BLE001
+        bench = None
+    if bench is None:
+        bench = {}
+        ejemplos = {
+            "sicop_resumen": {},
+            "sicop_carril": {},
+            "sicop_ficha_proveedor": {"cedula": "3101029593"},
+            "sicop_mercado_familia": {"familia_unspsc": "81112399"},
+            "sicop_cara_a_cara": {"cedula_a": "3101086562", "cedula_b": "3101095926"},
+            "sicop_regimen_evaluacion": {"nro_sicop": "20251200067"},
+            "sicop_campo_buscar": {"termino": "UPS"},
+        }
+        for name, args in ejemplos.items():
+            try:
+                import asyncio
+                import time
+                t0 = time.time()
+                asyncio.run(mcp.call_tool(name, args))
+                bench[name] = int((time.time() - t0) * 1000)
+            except Exception as e:  # noqa: BLE001
+                bench[name] = None
+        try:
+            cache.set(clave, bench, 6 * 3600)
+        except Exception:  # noqa: BLE001
+            pass
+
+    ejemplos_uso = [
+        ("Ficha de un proveedor", "¿Ficha de la empresa 3101029593? Captación por año y cartera de ejecución."),
+        ("Mercado de una familia", "¿Quiénes ganan en la familia 81112399 (mantenimiento de UPS)? Top adjudicatarios."),
+        ("Cara a cara de competidores", "Compará ESOSA (3101086562) contra SONDEL (3101095926): dónde ofertan juntos y quién es más barato."),
+        ("Perder siendo más barato", "¿Dónde ofertamos más barato que el ganador y perdimos? (perdidas_baratas)"),
+        ("Espacios blancos", "¿Qué procedimientos invitaron a nuestro proveedor y nadie ofertó? (invitados_vs_ofertantes)"),
+        ("Régimen de evaluación", "¿Cómo evalúan el procedimiento 20251200067? PRECIO_PURO o MIXTO."),
+        ("Tasa de cambio del día", "¿Cuál es el tipo de cambio de hoy? (BCCR oficial)"),
+        ("Log del pipeline", "¿Qué pasó en la última corrida del ciclo? (corrida_pasos)"),
+    ]
+
+    return render(request, "atlas/mcp.html", {
+        "tools": tools, "bench": bench, "ejemplos": ejemplos_uso,
+        "total_tools": len(tools), "titulo": "Documentación MCP",
+    })
+
+
 def mercado(request, familia):
     m = queries.mercado_familia(familia)
     return render(request, "atlas/mercado.html", {"familia": familia, "m": m, "fmt": _fmt, "titulo": f"Familia {familia}"})
