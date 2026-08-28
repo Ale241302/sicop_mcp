@@ -18,7 +18,11 @@ from . import queries
 
 
 def wrap(value):
-    """Envuelve listas en un dict: el framework MCP 2.x serializa mal una lista top-level."""
+    """Serializa (Decimal/date/modelos Django -> JSON) y envuelve listas en un
+    dict: el framework MCP 2.x serializa mal una lista top-level."""
+    from .queries import to_plain
+
+    value = to_plain(value)
     if isinstance(value, list):
         return {"resultados": value, "total": len(value)}
     return value
