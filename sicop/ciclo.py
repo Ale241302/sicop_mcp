@@ -1,25 +1,58 @@
 """Ciclo diario (plan FASE 2.4.2): 06:00 descarga+delta+senales+cola, gold y gates.
 
-Pasos: vigilar reescritura -> resolver PENDIENTES de resultado -> senales ->
-cola priorizada -> gold (recalcular derivadas + tests como gate). El reproceso
-del mes cambiado se delega al extractor (sicop_loop) con --months.
+Pasos: TC del dia -> vigilar reescritura -> (extractor + recarga + silver si hubo
+cambios) -> consolidar PENDIENTES -> senales -> cola -> gold (derivadas) -> tests.
+
+Cada paso se registra en corrida_paso (estado, detalle, filas, duracion) para
+auditar y afinar: todo queda trazado, no solo en stdout.
 """
 import logging
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime
 
 from django.utils import timezone
 
 from . import control, resultado, senales, vigilancia
-from .models import Senal, CtlCorrida
+from .models import CorridaPaso, Senal
 
 logger = logging.getLogger(__name__)
 
 
 def _corrida_id(prefix="diario"):
     return f"{prefix}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+
+def _registrar_paso(corrida, paso, estado, detalle, filas=None, duracion_ms=None):
+    """Registra un paso del pipeline en corrida_paso (append-only)."""
+    try:
+        CorridaPaso.objects.create(
+            corrida=corrida, paso=paso, estado=estado,
+            detalle=str(detalle)[:3000], filas=filas, duracion_ms=duracion_ms,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning("no pude registrar paso %s: %s", paso, e)
+
+
+def _paso(corrida, paso, fn, detalle_ok=None, detalle_err=None):
+    """Ejecuta fn, mide duracion y registra el paso OK/ERROR."""
+    t0 = time.time()
+    try:
+        res = fn()
+        ms = int((time.time() - t0) * 1000)
+        _registrar_paso(corrida, paso, "OK",
+                        detalle_ok(res) if detalle_ok else res,
+                        duracion_ms=ms)
+        return res
+    except Exception as e:  # noqa: BLE001
+        ms = int((time.time() - t0) * 1000)
+        _registrar_paso(corrida, paso, "ERROR",
+                        detalle_err(e) if detalle_err else str(e),
+                        duracion_ms=ms)
+        print(f"  paso {paso} ERROR (no bloquea el ciclo): {e}", flush=True)
+        return None
 
 
 def _run(cmd, cwd):
@@ -46,18 +79,16 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
     control.registrar_corrida(corrida, "ciclo_diario", notas="FASE 2")
     print(f"== ciclo diario {corrida} ==", flush=True)
 
-    # 0) TC del dia: consultar UNA vez, guardar en ctl_bccr_tc (el resto del
-    #    dia el MCP/API leen de ahi, sin volver a la API del BCCR)
-    print("-- tipo de cambio del dia --", flush=True)
-    try:
+    # 0) TC del dia: consultar UNA vez, guardar en ctl_bccr_tc
+    def _tc():
         from sicop import bccr
-        bccr.guardar_tc_del_dia(corrida=corrida)
-    except Exception as e:  # noqa: BLE001
-        print(f"  bccr fallo (no bloquea el ciclo): {e}", flush=True)
+        return bccr.guardar_tc_del_dia(corrida=corrida)
+    _paso(corrida, "tc_dia", _tc,
+          detalle_ok=lambda d: f"TC {d.get('tc_bccr_compra')} ({d.get('fuente')})")
 
-    # 1) vigilancia de reescritura (mes en curso + 3 cerrados + 2 rotativos)
-    print("-- vigilancia reescritura --", flush=True)
-    cambios = vigilancia.revisar_reescritura(corrida=corrida)
+    # 1) vigilancia de reescritura
+    cambios = _paso(corrida, "vigilancia", lambda: vigilancia.revisar_reescritura(corrida=corrida),
+                    detalle_ok=lambda c: f"meses revisados; cambios={c}")
     recargados = []
     if cambios and reprocesar:
         from sicop import loader, silver
@@ -68,43 +99,50 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
             senales._emit(corrida, "cambio_hash_fuente", "alta", "", None,
                           f"la fuente reescribio {m}", "reprocesar el mes", m)
             # anio completo, con --pesados (invitaciones + ordenes_pedido) y --force
-            # (reconstruye el archivo del anio en fresco: captura filas nuevas Y
-            # modificadas/eliminadas; el _cache del extractor solo re-descarga el
-            # mes que cambio).
-            _run([sys.executable, extractor, "--year", m[:4], "--pesados", "--force",
-                  "--no-vigilancia", "--out", out], cwd=os.path.dirname(extractor))
-        # recargar a Postgres el/los anio(s) afectado(s) y reconstruir silver
+            # (reconstruye el archivo del anio en fresco; el _cache solo re-descarga
+            # el mes que cambio).
+            rc = _paso(corrida, f"extractor_{m[:4]}",
+                       lambda: _run([sys.executable, extractor, "--year", m[:4],
+                                     "--pesados", "--force", "--no-vigilancia", "--out", out],
+                                    cwd=os.path.dirname(extractor)),
+                       detalle_ok=lambda r: f"anio {m[:4]} re-extraido rc={r}",
+                       detalle_err=lambda e: f"extractor {m[:4]}: {e}")
+        # recargar a Postgres el/los anio(s) afectado(s)
         for y in sorted({m[:4] for m in cambios}):
-            try:
-                r = loader.recargar_anio_afectado(out, settings.SICOP_DATA_DIR, y, corrida=corrida)
+            def _recargar(y=y):
+                return loader.recargar_anio_afectado(out, settings.SICOP_DATA_DIR, y, corrida=corrida)
+            r = _paso(corrida, f"recarga_{y}", _recargar,
+                      detalle_ok=lambda rr: f"copiados={rr.get('copiados')}",
+                      detalle_err=lambda e: f"recarga {y}: {e}")
+            if r:
                 recargados.append(r)
-            except Exception as e:  # noqa: BLE001
-                print(f"  recarga anio {y} fallo (no bloquea el ciclo): {e}", flush=True)
         if any(r.get("copiados") for r in recargados):
-            print("-- silver (reconstruir hechos) --", flush=True)
-            try:
-                silver.build_all(corrida)
-            except Exception as e:  # noqa: BLE001
-                print(f"  silver fallo (no bloquea el ciclo): {e}", flush=True)
+            _paso(corrida, "silver",
+                  lambda: silver.build_all(corrida),
+                  detalle_ok=lambda _: "6 hechos reconstruidos (fact_*)")
 
     # 2) consolidar PENDIENTES de resultado_decision
-    print("-- consolidar resultados --", flush=True)
-    resultado.consolidar_resultados(corrida)
+    _paso(corrida, "consolidar", lambda: resultado.consolidar_resultados(corrida),
+          detalle_ok=lambda _: "decisiones consolidadas")
 
     # 3) senales del dia
-    print("-- senales --", flush=True)
-    n = senales.generar_senales(corrida)
+    n = _paso(corrida, "senales", lambda: senales.generar_senales(corrida),
+              detalle_ok=lambda x: f"{x} senales")
 
     # 4) cola priorizada
-    _cola_priorizada(corrida)
+    _paso(corrida, "cola", lambda: _cola_priorizada(corrida),
+          detalle_ok=lambda q: f"{len(q)} senales en cola")
 
     # 5) gold + gates
     if gold:
-        print("-- gold + gates --", flush=True)
-        run_derivadas(None)
-        ok, failed = control.run_tests(corrida)
-        control.cerrar_corrida(corrida, "PUBLICADO" if not failed else "BLOQUEADO",
-                               notas=f"senales={n}; tests={len(failed)} fallidos")
+        _paso(corrida, "gold", lambda: run_derivadas(None),
+              detalle_ok=lambda _: "derivadas (gold) recalculadas")
+        ok, failed = _paso(corrida, "tests",
+                           lambda: control.run_tests(corrida),
+                           detalle_ok=lambda r: f"{len(r[0])} PASS / {len(r[1])} FAIL")
+        fallidos = (failed or [])
+        control.cerrar_corrida(corrida, "PUBLICADO" if not fallidos else "BLOQUEADO",
+                               notas=f"senales={n}; tests={len(fallidos)} fallidos")
     else:
         control.cerrar_corrida(corrida, "OK", notas=f"senales={n}")
     print(f"== fin ciclo {corrida} ==", flush=True)

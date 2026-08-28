@@ -80,13 +80,14 @@ def procedimiento(request, nro):
 
 def calidad(request):
     from sicop.models import (CtlDeriva, CtlTest, CtlCorrida, CatalogoCampo,
-                              VigilanciaCheck, BronzeFila)
+                              VigilanciaCheck, BronzeFila, CorridaPaso)
     ctx = {
         "deriva": list(CtlDeriva.objects.order_by("CONJUNTO", "ANIO", "CAMPO")[:300]),
         "tests": list(CtlTest.objects.order_by("-id")[:50]),
         "corridas": list(CtlCorrida.objects.order_by("-INICIADO_EN")[:20]),
         "campos": list(CatalogoCampo.objects.exclude(TRAMPA__isnull=True)[:40]),
         "vigilancia": list(VigilanciaCheck.objects.order_by("-fecha")[:20]),
+        "pasos": list(CorridaPaso.objects.order_by("-id")[:60]),
         "bronze": BronzeFila.objects.count(),
     }
     return render(request, "atlas/calidad.html", ctx)

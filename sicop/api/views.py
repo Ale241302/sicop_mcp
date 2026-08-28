@@ -52,6 +52,7 @@ MODEL_TABLES = [
     (m.CatalogoCampo, "catalogo-campo"),
     (m.CtlCorrida, "ctl-corrida"),
     (m.CtlTest, "ctl-test"),
+    (m.CorridaPaso, "corrida-paso"),
     (m.CtlMesFuente, "ctl-mes-fuente"),
     (m.CtlEsquema, "ctl-esquema"),
     (m.CtlCuarentena, "ctl-cuarentena"),

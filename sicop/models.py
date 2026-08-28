@@ -1435,3 +1435,24 @@ class CtlBccrTc(models.Model):
         db_table = 'ctl_bccr_tc'
         ordering = ['-fecha']
 
+
+class CorridaPaso(models.Model):
+    """corrida_paso: log estructurado de cada paso del pipeline (ciclo diario,
+    fase1, completaciones...). Paso, estado OK/ERROR, detalle, filas y duracion.
+
+    Facil de auditar y afinar: cada corrida deja su traza de
+    tc_dia -> vigilancia -> extractor -> recarga -> silver -> gold -> tests.
+    """
+    corrida = models.TextField(blank=True, null=True)
+    paso = models.TextField(blank=True, null=True)
+    estado = models.TextField(blank=True, null=True)
+    detalle = models.TextField(blank=True, null=True)
+    filas = models.BigIntegerField(null=True, blank=True)
+    duracion_ms = models.BigIntegerField(null=True, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'corrida_paso'
+        ordering = ['corrida', 'id']
+        indexes = [models.Index(fields=['corrida'])]
+

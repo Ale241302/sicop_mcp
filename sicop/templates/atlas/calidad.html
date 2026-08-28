@@ -25,6 +25,11 @@
 {% for c in corridas %}<tr><td>{{ c.CORRIDA_ID }}</td><td><span class="badge {% if c.ESTADO == 'PUBLICADO' %}g{% elif c.ESTADO == 'BLOQUEADO' %}r{% else %}w{% endif %}">{{ c.ESTADO }}</span></td><td>{{ c.ALCANCE }}</td><td>{{ c.INICIADO_EN|date:"d/m H:i" }}</td></tr>{% endfor %}
 </table>
 
+<h2>Log de pasos del pipeline (corrida_paso)</h2>
+<table><tr><th>Corrida</th><th>Paso</th><th>Estado</th><th>Detalle</th><th>ms</th><th>Cuándo</th></tr>
+{% for p in pasos %}<tr><td>{{ p.corrida }}</td><td>{{ p.paso }}</td><td><span class="badge {% if p.estado == 'OK' %}g{% else %}r{% endif %}">{{ p.estado }}</span></td><td>{{ p.detalle }}</td><td>{{ p.duracion_ms }}</td><td>{{ p.creado_en|date:"d/m H:i:s" }}</td></tr>{% endfor %}
+</table>
+
 <h2>Vigilancia de reescritura</h2>
 <table><tr><th>Mes</th><th>Resultado</th><th>Detalle</th><th>Fecha</th></tr>
 {% for v in vigilancia %}<tr><td>{{ v.aaaamm }}</td><td>{{ v.resultado }}</td><td>{{ v.detalle }}</td><td>{{ v.fecha|date:"d/m H:i" }}</td></tr>{% endfor %}

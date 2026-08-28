@@ -451,6 +451,19 @@ def sicop_vigilancia(limit: int = 50) -> dict:
 
 
 @mcp.tool()
+def sicop_corrida_pasos(corrida: str = "", limit: int = 100) -> dict:
+    """Log estructurado del pipeline por corrida (tc_dia, vigilancia, extractor,
+    recarga, silver, gold, tests) con estado, detalle, filas y duracion. Sin
+    corrida devuelve los ultimos pasos de todas las corridas."""
+    from sicop.models import CorridaPaso as M
+
+    qs = M.objects.all()
+    if corrida:
+        qs = qs.filter(corrida=corrida)
+    return wrap(list(qs.order_by("-id")[:limit]))
+
+
+@mcp.tool()
 def sicop_ciclo_diario(corrida: str = "") -> dict:
     """EJECUTA el ciclo diario de las 06:00: vigilancia + consolidar + senales + cola + gold."""
     from sicop.ciclo import ciclo_diario
