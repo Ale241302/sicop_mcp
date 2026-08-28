@@ -1,0 +1,17 @@
+{% extends "atlas/base.html" %}
+{% block title %}API SICOP · {{ request.path }}{% endblock %}
+{% block body %}
+<h1>API SICOP · {{ request.path }}</h1>
+<p class="sobre"><b>API</b> Clientes programáticos usan <code>Accept: application/json</code>. Esta página es la vista humana del mismo endpoint.</p>
+{% if results %}
+<div class="card">
+<table>
+{% for r in results %}{% if forloop.first %}<tr>{% for k, v in r.items %}<th>{{ k }}</th>{% endfor %}</tr>{% endif %}{% endfor %}
+{% for r in results %}<tr>{% for k, v in r.items %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}
+</table>
+</div>
+<p class="sobre"><b>{{ count }} filas</b>{% if next %} · <a href="{{ next }}">siguiente →</a>{% endif %}{% if previous %} · <a href="{{ previous }}">← anterior</a>{% endif %}</p>
+{% else %}
+<p class="sobre"><b>Sin resultados</b></p>
+{% endif %}
+{% endblock %}

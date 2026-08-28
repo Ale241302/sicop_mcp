@@ -4,6 +4,7 @@ from django.db import connection
 from rest_framework import viewsets, filters
 from rest_framework.decorators import api_view
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.response import Response
 
 from sicop import models as m
@@ -152,12 +153,22 @@ def build_viewset(model):
 
 
 class _AggListView(viewsets.ViewSet):
-    """ViewSet de agregados: queryset_agg devuelve lista de dicts paginada."""
+    """ViewSet de agregados: queryset_agg devuelve lista de dicts paginada.
+
+    Content negotiation: JSON para clientes API (Accept: application/json),
+    HTML con el diseno del Atlas para el navegador (Accept: text/html).
+    """
+
+    renderer_classes = [JSONRenderer, TemplateHTMLRenderer]
+    template_name = "atlas/api.html"
 
     def list(self, request):
         rows = self.queryset_agg(request)
         page = self.paginate_queryset(rows) if hasattr(self, "paginate_queryset") else rows
-        return self.get_paginated_response(page) if page is not None else Response(rows)
+        resp = self.get_paginated_response(page) if page is not None else Response(rows)
+        if getattr(request, "accepted_renderer", None) and request.accepted_renderer.format == "html":
+            resp.template_name = self.template_name
+        return resp
 
     def paginate_queryset(self, rows):
         return self.paginator.paginate_queryset(rows, self.request, view=self)
