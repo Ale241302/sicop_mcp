@@ -48,6 +48,17 @@ def _tc_del_dia():
 
 
 def resumen():
+    """Conteos por tabla, cacheados ~6h (los datos solo cambian en el ciclo
+    diario 06:00/18:00). Evita contar 55 tablas (incl. 42M filas) por request."""
+    from django.core.cache import cache
+
+    clave = "sicop:resumen:v1"
+    try:
+        cached = cache.get(clave)
+        if cached:
+            return cached
+    except Exception:  # noqa: BLE001  (Redis caido -> computar sin cache)
+        cached = None
     import inspect
 
     from . import models as m
@@ -62,10 +73,15 @@ def resumen():
             counts[name] = cls.objects.count()
         except Exception:  # noqa: BLE001
             counts[name] = None
-    return {
+    out = {
         "total_tablas": len(counts),
         "tablas": {k: v for k, v in sorted(counts.items())},
     }
+    try:
+        cache.set(clave, out, 6 * 3600)
+    except Exception:  # noqa: BLE001
+        pass
+    return out
 
 
 def ficha_proveedor(cedula):

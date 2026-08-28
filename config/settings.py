@@ -99,6 +99,18 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
     "PAGE_SIZE": 50,
     "DEFAULT_FILTER_BACKENDS": ["rest_framework.filters.SearchFilter", "rest_framework.filters.OrderingFilter"],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+}
+
+# ---- Cache (Redis): el resumen de conteos se cachea ~6h (los datos solo
+# cambian en el ciclo de 06:00/18:00) para que /api/v1/resumen/ y el Atlas
+# carguen en milisegundos en vez de contar 55 tablas (incl. 42M filas) cada vez.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL", "redis://localhost:6379/0"),
+        "TIMEOUT": 6 * 3600,
+    }
 }
 
 # ---- Celery ----

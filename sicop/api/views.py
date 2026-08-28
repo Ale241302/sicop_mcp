@@ -224,9 +224,19 @@ class InstitucionesViewSet(_AggListView):
 
 
 class ResumenViewSet(_AggListView):
-    """Conteo de filas por tabla + estado de carga."""
+    """Conteo de filas por tabla + estado de carga (cacheado ~6h: los datos solo
+    cambian en el ciclo diario)."""
 
     def queryset_agg(self, request):
+        from django.core.cache import cache
+
+        clave = "sicop:resumen:api:v1"
+        try:
+            cached = cache.get(clave)
+            if cached:
+                return cached
+        except Exception:  # noqa: BLE001  (Redis caido -> computar sin cache)
+            cached = None
         rows = []
         for model, _ in MODEL_TABLES:
             name = model.__name__
@@ -234,6 +244,10 @@ class ResumenViewSet(_AggListView):
                 rows.append({"tabla": model._meta.db_table, "modelo": name, "filas": model.objects.count()})
             except Exception:  # noqa: BLE001
                 rows.append({"tabla": model._meta.db_table, "modelo": name, "filas": None})
+        try:
+            cache.set(clave, rows, 6 * 3600)
+        except Exception:  # noqa: BLE001
+            pass
         return rows
 
 

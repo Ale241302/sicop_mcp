@@ -23,17 +23,31 @@ def _fmt(n):
 
 
 def index(request):
+    from django.core.cache import cache
+
     from sicop.models import (CtlTest, CtlDeriva, Senal, CtlCorrida, FactAdjudicacion,
                               FactOrden, FactOferta, SicopInvitaciones)
 
-    ctx = {
-        "titulo": "Atlas SICOP",
-        "resumen": {
+    clave = "sicop:atlas:resumen:v1"
+    try:
+        resumen = cache.get(clave)
+    except Exception:  # noqa: BLE001  (Redis caido -> computar sin cache)
+        resumen = None
+    if resumen is None:
+        resumen = {
             "adjudicaciones": FactAdjudicacion.objects.count(),
             "ofertas": FactOferta.objects.count(),
             "ordenes": FactOrden.objects.count(),
             "invitaciones": SicopInvitaciones.objects.count(),
-        },
+        }
+        try:
+            cache.set(clave, resumen, 6 * 3600)
+        except Exception:  # noqa: BLE001
+            pass
+
+    ctx = {
+        "titulo": "Atlas SICOP",
+        "resumen": resumen,
         "tests": list(CtlTest.objects.order_by("-id")[:8]),
         "corridas": list(CtlCorrida.objects.order_by("-INICIADO_EN")[:6]),
         "senales": list(Senal.objects.order_by("-fecha")[:8]),
