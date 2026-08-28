@@ -705,6 +705,7 @@ class SicopLineasCartel(TimestampedMixin):
 
     class Meta:
         db_table = 'sicop_lineas_cartel'
+        indexes = [models.Index(fields=['NRO_SICOP'])]
 
 
 class SicopLineasOfertadas(TimestampedMixin):
@@ -726,6 +727,7 @@ class SicopLineasOfertadas(TimestampedMixin):
 
     class Meta:
         db_table = 'sicop_lineas_ofertadas'
+        indexes = [models.Index(fields=['NRO_SICOP'])]
 
 
 class SicopLineasAdjudicadas(TimestampedMixin):
@@ -748,6 +750,7 @@ class SicopLineasAdjudicadas(TimestampedMixin):
 
     class Meta:
         db_table = 'sicop_lineas_adjudicadas'
+        indexes = [models.Index(fields=['NRO_SICOP'])]
 
 
 class SicopLineasContratadas(TimestampedMixin):
@@ -777,6 +780,7 @@ class SicopLineasContratadas(TimestampedMixin):
 
     class Meta:
         db_table = 'sicop_lineas_contratadas'
+        indexes = [models.Index(fields=['NRO_SICOP'])]
 
 
 class SicopLineasRecibidas(TimestampedMixin):
@@ -799,6 +803,7 @@ class SicopLineasRecibidas(TimestampedMixin):
 
     class Meta:
         db_table = 'sicop_lineas_recibidas'
+        indexes = [models.Index(fields=['NRO_SICOP'])]
 
 
 class SicopRecursos(TimestampedMixin):
@@ -881,6 +886,7 @@ class SicopOrdenesPedido(TimestampedMixin):
 
     class Meta:
         db_table = 'sicop_ordenes_pedido'
+        indexes = [models.Index(fields=['CEDULAPROVEEDOR'])]
 
 
 class SicopInvitaciones(TimestampedMixin):
@@ -896,6 +902,7 @@ class SicopInvitaciones(TimestampedMixin):
 
     class Meta:
         db_table = 'sicop_invitaciones'
+        indexes = [models.Index(fields=['CEDULA_PROVEEDOR'])]
 
 
 
