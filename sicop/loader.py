@@ -282,9 +282,9 @@ def recargar_anio_afectado(recovery_dir, data_dir, year, corrida=None, umbral=0.
         model_name = CORE_SETS.get(setn)
         if not model_name:
             continue
-        if setn in ("instituciones", "proveedores"):
-            # dimensiones: no particionadas por mes; no se recargan por anio
-            continue
+        # proveedores/instituciones SI estan particionadas por anio (MES_PUBLICACION):
+        # recargarlas con el anio evita que el gate falle (p.ej. cedula_orden_en_proveedores)
+        # por tener ordenes nuevas sin el proveedor cargado.
         model = apps.get_model("sicop", model_name)
         borradas = model.objects.filter(MES_PUBLICACION__startswith=year).delete()[0]
         res = load_csv(model_name, os.path.join(data_dir, fn))
