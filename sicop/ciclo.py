@@ -62,8 +62,8 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
     if cambios and reprocesar:
         from sicop import loader, silver
 
-        extractor = os.path.join(settings.SICOP_DATA_DIR, "..", "..", "03_scripts", "harness_actualizado", "sicop_loop.py")
-        out = os.path.join(settings.SICOP_DATA_DIR, "..", "..", "salida_recuperacion")
+        extractor = os.path.join(settings.SICOP_SCRIPTS_DIR, "harness_actualizado", "sicop_loop.py")
+        out = settings.SICOP_RECOVERY_DIR
         for m in cambios:
             senales._emit(corrida, "cambio_hash_fuente", "alta", "", None,
                           f"la fuente reescribio {m}", "reprocesar el mes", m)

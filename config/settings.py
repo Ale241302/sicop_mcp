@@ -131,6 +131,8 @@ CELERY_BEAT_SCHEDULE = {
 
 # ---- Datos SICOP ----
 SICOP_DATA_DIR = os.environ.get("SICOP_DATA_DIR", str(BASE_DIR.parent / "Salidas"))
+SICOP_SCRIPTS_DIR = os.environ.get("SICOP_SCRIPTS_DIR", str(BASE_DIR.parent / "03_scripts"))
+SICOP_RECOVERY_DIR = os.environ.get("SICOP_RECOVERY_DIR", str(BASE_DIR.parent / "salida_recuperacion"))
 
 # ---- Fuentes externas (F5) ----
 BCCR_TOKEN = os.environ.get("BCCR_TOKEN", "")
