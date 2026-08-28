@@ -60,6 +60,7 @@ class SicopAdjudicacionesFirme(TimestampedMixin):
     class Meta:
         db_table = 'sicop_adjudicaciones_firme'
         verbose_name = 'adjudicaciones_firme'
+        indexes = [models.Index(fields=['NRO_SICOP'])]
 
 
 class SicopCarteles(TimestampedMixin):
@@ -83,6 +84,7 @@ class SicopCarteles(TimestampedMixin):
     class Meta:
         db_table = 'sicop_carteles'
         verbose_name = 'carteles'
+        indexes = [models.Index(fields=['FECHAH_APERTURA']), models.Index(fields=['NRO_SICOP'])]
 
 
 class SicopContratos(TimestampedMixin):
