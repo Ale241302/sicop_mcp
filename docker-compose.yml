@@ -86,6 +86,9 @@
     command: python -m sicop.mcp_server streamable-http --host 0.0.0.0 --port 9000 --path /mcp
     volumes:
       - .:/app
+      - ${SICOP_DATA_DIR:-/opt/sicop_data/Salidas}:/data/salidas
+      - ${SICOP_SCRIPTS_DIR:-/opt/sicop_data/scripts}:/data/scripts
+      - ${SICOP_RECOVERY_DIR:-/opt/sicop_data/recuperacion}:/data/recuperacion
     environment:
       POSTGRES_DB: sicop
       POSTGRES_USER: sicop
@@ -94,9 +97,13 @@
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
       SICOP_DATA_DIR: /data/salidas
+      SICOP_SCRIPTS_DIR: /data/scripts
+      SICOP_RECOVERY_DIR: /data/recuperacion
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     ports:
       - "8450:9000"
 
