@@ -62,8 +62,13 @@ def pruebas_politica(corrida_id="politica"):
     r["p2_no_sql_libre"] = _test(corrida_id, "p2_no_sql_libre", not has_sql,
                                  "no existe /api/v1/sql/", "no SQL libre")
 
-    # P3: no mezclar monedas en el hecho de orden (CRC solo en columna CRC)
-    mezcla = FactOrden.objects.exclude(TOTAL_ORDEN_CRC__isnull=True).exclude(MONEDA_ORDEN="CRC").count()
+    # P3: no mezclar monedas en el hecho de orden (CRC solo en columna CRC).
+    # Moneda vacia/NULL = CRC por convencion (igual que silver y el test gate):
+    # solo cuentan filas con moneda EXPLICITA no-CRC que tengan total CRC.
+    mezcla = (FactOrden.objects.exclude(TOTAL_ORDEN_CRC__isnull=True)
+              .exclude(MONEDA_ORDEN="CRC")
+              .exclude(MONEDA_ORDEN__isnull=True)
+              .exclude(MONEDA_ORDEN="").count())
     r["p3_no_mezcla_monedas"] = _test(corrida_id, "p3_no_mezcla_monedas", mezcla == 0,
                                       f"{mezcla} filas", "0")
 
