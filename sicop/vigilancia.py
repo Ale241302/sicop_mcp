@@ -76,15 +76,47 @@ def _meses_en_juego(dias=180, max_meses=4):
     return [r["mes"].year * 100 + r["mes"].month for r in filas if r["mes"]]
 
 
+def _meses_con_pendientes():
+    """Meses de publicacion que aun tienen procedimientos SIN adjudicacion firme.
+
+    Un mes es 'cerrado' cuando TODOS sus carteles llegaron a adjudicacion firme;
+    esos no se re-barren (su data es final). Solo los meses con pendientes vivos
+    entran al barrido rotativo. Aparece y crece con el tiempo (los 84 no son fijos)."""
+    from django.db.models import Exists, OuterRef
+
+    from .models import SicopAdjudicacionesFirme, SicopCarteles
+
+    tiene_firme = Exists(
+        SicopAdjudicacionesFirme.objects.filter(NRO_SICOP=OuterRef("NRO_SICOP"))
+    )
+    return set(
+        SicopCarteles.objects
+        .exclude(MES_PUBLICACION__isnull=True)
+        .annotate(tiene_firme=tiene_firme)
+        .filter(tiene_firme=False)
+        .values_list("MES_PUBLICACION", flat=True)
+        .distinct()
+    )
+
+
 def _meses_objetivo():
     """Mes en curso + 3 cerrados + 2 rotativos del historico + los meses con
-    procedimientos en juego (apertura reciente, sin adjudicacion firme)."""
+    procedimientos en juego (apertura reciente, sin adjudicacion firme).
+
+    Los meses totalmente firmes (cerrados) NO se rotan: son finales. El barrido
+    solo cubre meses con pendientes vivos, asi el rango no crece con el tiempo."""
     hoy = datetime.now()
     actual = int(f"{hoy.year:04d}{hoy.month:02d}")
     meses = [actual - 1, actual - 2, actual - 3, actual - 4]  # en curso y 3 cerrados
-    # 2 rotativos: barridos por el historial (2020..), deterministas por dia
+    # 2 rotativos: barridos por el historial (2020..), deterministas por dia,
+    # SOLO sobre meses con procedimientos pendientes (no firmes).
     rot = []
-    hist = [v for v in range(202001, actual - 4) if 1 <= v % 100 <= 12]
+    try:
+        pendientes = _meses_con_pendientes()
+        hist = [v for v in range(202001, actual - 4) if 1 <= v % 100 <= 12 and str(v) in pendientes]
+    except Exception as e:  # noqa: BLE001
+        logger.warning("meses con pendientes no disponibles: %s", e)
+        hist = [v for v in range(202001, actual - 4) if 1 <= v % 100 <= 12]
     if hist:
         dia = hoy.toordinal()
         for i in range(2):
