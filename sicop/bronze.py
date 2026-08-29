@@ -68,12 +68,17 @@ def backfill_core(corrida, data_dir, sets=None, years=None):
                     "ofertas", "lineas_ofertadas", "lineas_adjudicadas", "lineas_contratadas",
                     "lineas_recibidas", "contratos", "etapas", "garantias", "inhibiciones",
                     "instituciones", "procedimientos_adm", "reajustes", "remates",
-                    "sanciones_registro", "recursos", "proveedores", "recepciones", "ordenes_pedido"]
+                    "sanciones_registro", "recursos", "proveedores", "recepciones",
+                    "ordenes_pedido", "invitaciones"]
     total = 0
     for set_name in sets:
         for year in years:
             p = os.path.join(data_dir, f"{set_name}_{year}.csv")
             if os.path.exists(p) and os.path.getsize(p) > 1000:
                 total += construir(set_name, p, corrida, mes=f"{year}XX")
+        # invitaciones 2022 vive en archivo especial dentro de Salidas
+        inv22 = os.path.join(data_dir, "invitaciones_2022-002.csv")
+        if set_name == "invitaciones" and os.path.exists(inv22) and os.path.getsize(inv22) > 1000:
+            total += construir("invitaciones", inv22, corrida, mes="2022XX")
     print(f"bronze total: {total} filas en corrida {corrida}", flush=True)
     return total
