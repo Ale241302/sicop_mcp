@@ -91,7 +91,7 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
                     detalle_ok=lambda c: f"meses revisados; cambios={c}")
     recargados = []
     if cambios and reprocesar:
-        from sicop import loader, silver
+        from sicop import bronze, loader, silver
 
         extractor = os.path.join(settings.SICOP_SCRIPTS_DIR, "harness_actualizado", "sicop_loop.py")
         out = settings.SICOP_RECOVERY_DIR
@@ -116,6 +116,18 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
                       detalle_err=lambda e: f"recarga {y}: {e}")
             if r:
                 recargados.append(r)
+        # bronze: nuevo snapshot inmutable SOLO de los meses cambiados (append-only)
+        def _broncear():
+            total = 0
+            for y in sorted({m[:4] for m in cambios}):
+                meses_cambio = {m for m in cambios if m[:4] == y}
+                for setn in bronze.BRONZE_SETS:
+                    p = os.path.join(out, f"{setn}_{y}.csv")
+                    if os.path.exists(p) and os.path.getsize(p) > 1000:
+                        total += bronze.construir(setn, p, corrida, meses=meses_cambio)
+            return total
+        _paso(corrida, "broncear", _broncear,
+              detalle_ok=lambda t: f"+{t} filas (meses {sorted(cambios)})")
         if any(r.get("copiados") for r in recargados):
             _paso(corrida, "silver",
                   lambda: silver.build_all(corrida),

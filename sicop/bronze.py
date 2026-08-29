@@ -18,6 +18,13 @@ from .models import BronzeFila
 logger = logging.getLogger(__name__)
 BATCH = 20000
 
+BRONZE_SETS = ["adjudicaciones", "adjudicaciones_firme", "carteles", "lineas_cartel",
+               "ofertas", "lineas_ofertadas", "lineas_adjudicadas", "lineas_contratadas",
+               "lineas_recibidas", "contratos", "etapas", "garantias", "inhibiciones",
+               "instituciones", "procedimientos_adm", "reajustes", "remates",
+               "sanciones_registro", "recursos", "proveedores", "recepciones",
+               "ordenes_pedido", "invitaciones"]
+
 
 def _linea_hash(row):
     h = hashlib.sha256()
@@ -27,8 +34,13 @@ def _linea_hash(row):
     return h.hexdigest()
 
 
-def construir(set_name, path, corrida, mes=None):
-    """Vuelca un CSV a bronze (inmutable). Devuelve filas escritas."""
+def construir(set_name, path, corrida, mes=None, meses=None):
+    """Vuelca un CSV a bronze (inmutable). Devuelve filas escritas.
+
+    `mes` = MES_PUBLICACION por defecto si el CSV no lo trae.
+    `meses` = set de MES_PUBLICACION a incluir (None = todas); si se pasa,
+    solo se broncean las filas de esos meses (nuevo snapshot tras reescritura).
+    """
     archivo = os.path.basename(path)
     now = timezone.now()
     n = 0
@@ -44,6 +56,8 @@ def construir(set_name, path, corrida, mes=None):
             mes_v = mes
             if mes_idx is not None and mes_idx < len(row) and row[mes_idx].strip():
                 mes_v = row[mes_idx].strip()
+            if meses is not None and mes_v not in meses:
+                continue
             batch.append(BronzeFila(
                 CONJUNTO=set_name, MES=mes_v, CORRIDA_ID=corrida, ARCHIVO=archivo,
                 LINEA_FISICA=i, HASH_FILA=_linea_hash(row),
@@ -55,7 +69,10 @@ def construir(set_name, path, corrida, mes=None):
                 batch = []
     if batch:
         BronzeFila.objects.bulk_create(batch, batch_size=2000)
-    print(f"bronze {set_name} {os.path.basename(path)}: {n} filas", flush=True)
+    if meses is None:
+        print(f"bronze {set_name} {os.path.basename(path)}: {n} filas", flush=True)
+    else:
+        print(f"bronze {set_name} {os.path.basename(path)}: +{n} filas (meses {sorted(meses)})", flush=True)
     return n
 
 
@@ -64,12 +81,7 @@ def backfill_core(corrida, data_dir, sets=None, years=None):
     from django.conf import settings
 
     years = years or [str(y) for y in range(2020, 2027)]
-    sets = sets or ["adjudicaciones", "adjudicaciones_firme", "carteles", "lineas_cartel",
-                    "ofertas", "lineas_ofertadas", "lineas_adjudicadas", "lineas_contratadas",
-                    "lineas_recibidas", "contratos", "etapas", "garantias", "inhibiciones",
-                    "instituciones", "procedimientos_adm", "reajustes", "remates",
-                    "sanciones_registro", "recursos", "proveedores", "recepciones",
-                    "ordenes_pedido", "invitaciones"]
+    sets = sets or BRONZE_SETS
     total = 0
     for set_name in sets:
         for year in years:
