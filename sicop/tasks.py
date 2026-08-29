@@ -62,3 +62,42 @@ def consolidar_resultados(self, corrida=None):
     from .resultado import consolidar_resultados
 
     return consolidar_resultados(corrida)
+
+
+@shared_task(bind=True, name="sicop.reparar_mes")
+def reparar_mes(self, aaaamm, corrida=None):
+    """REPARA un mes: re-extrae el anio desde la fuente, recarga, broncea el mes,
+    reconstruye silver + gold y corre el gate. Para llenar huecos / datos vacios."""
+    import os
+    import subprocess
+    import sys
+    from datetime import datetime
+
+    from django.conf import settings
+
+    from sicop import bronze, control, loader, silver
+    from sicop.derivadas import run as run_derivadas
+
+    corrida = corrida or f"reparar-{aaaamm}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    control.registrar_corrida(corrida, "reparar_mes", notas=f"reparar {aaaamm}")
+    y = aaaamm[:4]
+    extractor = os.path.join(settings.SICOP_SCRIPTS_DIR, "harness_actualizado", "sicop_loop.py")
+    out = settings.SICOP_RECOVERY_DIR
+
+    rc = subprocess.run([sys.executable, extractor, "--year", y, "--pesados", "--force",
+                         "--no-vigilancia", "--out", out], cwd=os.path.dirname(extractor)).returncode
+    if rc != 0:
+        control.cerrar_corrida(corrida, "BLOQUEADO", notas=f"extractor rc={rc}")
+        return {"corrida": corrida, "estado": "ERROR", "extractor_rc": rc}
+
+    loader.recargar_anio_afectado(out, settings.SICOP_DATA_DIR, y, corrida=corrida)
+    for setn in bronze.BRONZE_SETS:
+        p = os.path.join(out, f"{setn}_{y}.csv")
+        if os.path.exists(p) and os.path.getsize(p) > 1000:
+            bronze.construir(setn, p, corrida, meses={aaaamm})
+    silver.build_all(corrida)
+    run_derivadas(None)
+    ok, failed = control.run_tests(corrida)
+    control.cerrar_corrida(corrida, "PUBLICADO" if not failed else "BLOQUEADO",
+                           notas=f"tests={len(ok)} PASS / {len(failed)} FAIL")
+    return {"corrida": corrida, "estado": "PUBLICADO" if not failed else "BLOQUEADO", "tests_fail": len(failed)}

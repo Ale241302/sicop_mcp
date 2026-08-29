@@ -464,6 +464,94 @@ def sicop_corrida_pasos(corrida: str = "", limit: int = 100) -> dict:
 
 
 @mcp.tool()
+def sicop_verificar_procedimiento(nro_sicop: str) -> dict:
+    """Verifica si una licitacion (nro_sicop) esta COMPLETA en nuestra base:
+    cartel, lineas del cartel, ofertas, adjudicaciones, adjudicacion firme,
+    contratos, ordenes y recepciones. Si algo da 0, la licitacion puede existir
+    en SICOP pero faltar aca -> usar sicop_reparar_mes para el mes."""
+    from sicop.models import (SicopAdjudicaciones, SicopAdjudicacionesFirme,
+                              SicopCarteles, SicopContratos, SicopLineasCartel,
+                              SicopOfertas, SicopOrdenesPedido, SicopRecepciones)
+
+    tabs = {
+        "cartel": SicopCarteles,
+        "lineas_cartel": SicopLineasCartel,
+        "ofertas": SicopOfertas,
+        "adjudicaciones": SicopAdjudicaciones,
+        "adjudicacion_firme": SicopAdjudicacionesFirme,
+        "contratos": SicopContratos,
+        "ordenes_pedido": SicopOrdenesPedido,
+        "recepciones": SicopRecepciones,
+    }
+    conteos = {n: M.objects.filter(NRO_SICOP=nro_sicop).count() for n, M in tabs.items()}
+    completo = conteos["cartel"] > 0 and conteos["lineas_cartel"] > 0 and conteos["adjudicaciones"] > 0
+    return {
+        "nro_sicop": nro_sicop,
+        "conteos": conteos,
+        "completo": completo,
+        "nota": "si el cartel/lineas da 0 pero sabes que existe en SICOP, el mes no se extrajo -> sicop_reparar_mes",
+    }
+
+
+@mcp.tool()
+def sicop_reparar_mes(aaaamm: str) -> dict:
+    """REPARA un mes (AAAAMM, ej 202608): re-extrae el anio desde la fuente SICOP,
+    recarga Postgres, broncea el mes, reconstruye silver+gold y corre el gate.
+    Es async: devuelve la corrida; consulta sicop_corrida_pasos para el resultado."""
+    from sicop.tasks import reparar_mes as t
+
+    aaaamm = aaaamm.strip()
+    if not (len(aaaamm) == 6 and aaaamm.isdigit()):
+        return {"error": "aaaamm debe ser YYYYMM (ej 202608)"}
+    res = t.delay(aaaamm)
+    return {"aaaamm": aaaamm, "corrida": f"reparar-{aaaamm}", "estado": "ENCOLADO",
+            "nota": "monitorear con sicop_corrida_pasos; tarda ~20 min"}
+
+
+@mcp.tool()
+def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
+    """Reconciliacion: revisa mes por mes si la fuente publico un ZIP pero nuestra
+    base esta VACIA (hueco). Con solo_reporte=True devuelve los meses con hueco;
+    con False, encola sicop_reparar_mes para cada uno."""
+    from django.db.models import Count
+
+    from sicop import vigilancia
+    from sicop.models import SicopAdjudicaciones, SicopOfertas
+
+    hoy = __import__("datetime").datetime.now()
+    actual = int(f"{hoy.year:04d}{hoy.month:02d}")
+    meses = [v for v in range(202001, actual + 1) if 1 <= v % 100 <= 12]
+    if anio:
+        meses = [m for m in meses if str(m)[:4] == anio]
+
+    adj_por_mes = {r["MES_PUBLICACION"]: r["n"] for r in
+                   SicopAdjudicaciones.objects.values("MES_PUBLICACION").annotate(n=Count("id"))}
+    of_por_mes = {r["MES_PUBLICACION"]: r["n"] for r in
+                  SicopOfertas.objects.values("MES_PUBLICACION").annotate(n=Count("id"))}
+
+    huecos = []
+    for m in meses:
+        h = vigilancia._head(str(m))
+        existe_fuente = h.get("status") == 200 and not h.get("error")
+        if not existe_fuente:
+            continue
+        n_adj = adj_por_mes.get(str(m), 0)
+        n_of = of_por_mes.get(str(m), 0)
+        if n_adj == 0 and n_of == 0:
+            huecos.append({"aaaamm": str(m), "adjudicaciones": n_adj, "ofertas": n_of,
+                           "fuente": "zip publicado, base vacia"})
+
+    reparados = []
+    if not solo_reporte and huecos:
+        from sicop.tasks import reparar_mes as t
+        for g in huecos:
+            t.delay(g["aaaamm"])
+            reparados.append(g["aaaamm"])
+    return {"total_meses": len(meses), "huecos": huecos, "reparados_encolados": reparados,
+            "nota": "hueco = la fuente publico el mes pero nuestra base no tiene adjudicaciones ni ofertas"}
+
+
+@mcp.tool()
 def sicop_ciclo_diario(corrida: str = "") -> dict:
     """EJECUTA el ciclo diario de las 06:00: vigilancia + consolidar + senales + cola + gold."""
     from sicop.ciclo import ciclo_diario
