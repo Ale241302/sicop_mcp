@@ -511,12 +511,14 @@ def sicop_reparar_mes(aaaamm: str) -> dict:
 @mcp.tool()
 def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
     """Reconciliacion: revisa mes por mes si la fuente publico un ZIP pero nuestra
-    base esta VACIA (hueco). Con solo_reporte=True devuelve los meses con hueco;
-    con False, encola sicop_reparar_mes para cada uno."""
+    base esta VACIA (hueco real). Usa lineas_cartel como senal de presencia (la
+    mas consistente; carteles/ofertas varian por mes de publicacion). Con
+    solo_reporte=True devuelve los meses con hueco; con False, encola
+    sicop_reparar_mes para cada uno."""
     from django.db.models import Count
 
     from sicop import vigilancia
-    from sicop.models import SicopAdjudicaciones, SicopOfertas
+    from sicop.models import SicopLineasCartel
 
     hoy = __import__("datetime").datetime.now()
     actual = int(f"{hoy.year:04d}{hoy.month:02d}")
@@ -524,10 +526,8 @@ def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
     if anio:
         meses = [m for m in meses if str(m)[:4] == anio]
 
-    adj_por_mes = {r["MES_PUBLICACION"]: r["n"] for r in
-                   SicopAdjudicaciones.objects.values("MES_PUBLICACION").annotate(n=Count("id"))}
-    of_por_mes = {r["MES_PUBLICACION"]: r["n"] for r in
-                  SicopOfertas.objects.values("MES_PUBLICACION").annotate(n=Count("id"))}
+    lc_por_mes = {r["MES_PUBLICACION"]: r["n"] for r in
+                  SicopLineasCartel.objects.values("MES_PUBLICACION").annotate(n=Count("id"))}
 
     huecos = []
     for m in meses:
@@ -535,11 +535,10 @@ def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
         existe_fuente = h.get("status") == 200 and not h.get("error")
         if not existe_fuente:
             continue
-        n_adj = adj_por_mes.get(str(m), 0)
-        n_of = of_por_mes.get(str(m), 0)
-        if n_adj == 0 and n_of == 0:
-            huecos.append({"aaaamm": str(m), "adjudicaciones": n_adj, "ofertas": n_of,
-                           "fuente": "zip publicado, base vacia"})
+        n_lc = lc_por_mes.get(str(m), 0)
+        if n_lc == 0:
+            huecos.append({"aaaamm": str(m), "lineas_cartel": n_lc,
+                           "fuente": "zip publicado, base vacia (sin lineas_cartel)"})
 
     reparados = []
     if not solo_reporte and huecos:
@@ -548,7 +547,7 @@ def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
             t.delay(g["aaaamm"])
             reparados.append(g["aaaamm"])
     return {"total_meses": len(meses), "huecos": huecos, "reparados_encolados": reparados,
-            "nota": "hueco = la fuente publico el mes pero nuestra base no tiene adjudicaciones ni ofertas"}
+            "nota": "hueco real = la fuente publico el mes pero nuestra base no tiene NINGUNA linea del cartel (senal de presencia confiable)"}
 
 
 @mcp.tool()
