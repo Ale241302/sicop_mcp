@@ -34,7 +34,15 @@ mcp = MCPServer(
         "Sistema de inteligencia sobre datos abiertos de contratacion publica de Costa Rica (SICOP, 2020-2026). "
         "NIVEL DE MEDICION: toda cifra de negocio de un proveedor debe declarar si mide captacion "
         "(adjudicaciones), ejecucion (ordenes de pedido) o entrega (recepciones). Consultar un proveedor "
-        "por captacion lo subestima hasta 59x frente a su ejecucion real."
+        "por captacion lo subestima hasta 59x frente a su ejecucion real. "
+        "GESTION DEL SISTEMA: podes AUTO-GESTIONAR la base (diagnosticar, reparar, reconciliar). "
+        "Usa sicop_diagnostico para saber que necesita atencion, sicop_verificar_procedimiento para "
+        "revisar una licitacion especifica, sicop_reconciliar para hallar meses con huecos, y "
+        "sicop_reparar_mes para reparar un mes (re-extrae de la fuente, recarga Postgres, broncea, "
+        "reconstruye silver+gold y corre el gate). La ingesta es DETERMINISTA (el extractor lee los "
+        "ZIP oficiales); tu rol es diagnosticar y disparar reparaciones, NO editar datos crudos a mano "
+        "(el SQL libre esta bloqueado por enforcement). El ciclo diario 06:00/18:00 ya detecta y "
+        "reprocesa reescrituras de la fuente automaticamente."
     ),
 )
 
@@ -548,6 +556,62 @@ def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
             reparados.append(g["aaaamm"])
     return {"total_meses": len(meses), "huecos": huecos, "reparados_encolados": reparados,
             "nota": "hueco real = la fuente publico el mes pero nuestra base no tiene NINGUNA linea del cartel (senal de presencia confiable)"}
+
+
+@mcp.tool()
+def sicop_diagnostico() -> dict:
+    """Diagnostico de salud del sistema: que necesita atencion (tests fallidos,
+    meses con huecos, ultima corrida, recencia de datos, senales). La base para
+    que un agente decida que reparar/gestionar."""
+    from django.db.models import Count
+
+    from sicop.models import (CtlCorrida, CtlTest, CorridaPaso, Senal,
+                              SicopLineasCartel)
+
+    # 1) tests con FAIL (mas recientes)
+    fails = list(CtlTest.objects.filter(RESULTADO="FAIL")
+                 .values("CORRIDA_ID", "TEST", "VALOR_OBTENIDO").order_by("-id")[:10])
+
+    # 2) ultima corrida
+    ultima = list(CtlCorrida.objects.order_by("-INICIADO_EN")[:3].values(
+        "CORRIDA_ID", "ESTADO", "NOTAS", "INICIADO_EN"))
+
+    # 3) meses con 0 lineas_cartel en nuestra base (posible hueco, sin HEAD a fuente)
+    con_datos = set(SicopLineasCartel.objects.values_list("MES_PUBLICACION", flat=True).distinct())
+    hoy = __import__("datetime").datetime.now()
+    actual = int(f"{hoy.year:04d}{hoy.month:02d}")
+    meses_vacio = [v for v in range(202001, actual + 1) if 1 <= v % 100 <= 12 and str(v) not in con_datos]
+
+    # 4) recencia por tabla clave
+    recencia = {}
+    for tabla, campo in [("sicop_adjudicaciones", "MES_PUBLICACION"),
+                         ("sicop_ofertas", "MES_PUBLICACION"),
+                         ("sicop_ordenes_pedido", "MES_PUBLICACION"),
+                         ("sicop_invitaciones", "MES_PUBLICACION")]:
+        try:
+            from django.apps import apps
+            M = apps.get_model("sicop", {  # mapa nombre -> modelo
+                "sicop_adjudicaciones": "SicopAdjudicaciones",
+                "sicop_ofertas": "SicopOfertas",
+                "sicop_ordenes_pedido": "SicopOrdenesPedido",
+                "sicop_invitaciones": "SicopInvitaciones",
+            }[tabla])
+            mx = M.objects.filter(MES_PUBLICACION__isnull=False).order_by("-MES_PUBLICACION").values_list("MES_PUBLICACION", flat=True).first()
+            recencia[tabla] = mx
+        except Exception:  # noqa: BLE001
+            recencia[tabla] = None
+
+    # 5) senales abiertas
+    n_senales = Senal.objects.filter(estado="DETECTADA").count()
+
+    return {
+        "tests_fallidos": fails,
+        "ultima_corrida": ultima,
+        "meses_sin_lineas_cartel": meses_vacio,
+        "recencia_max_mes": recencia,
+        "senales_detectadas": n_senales,
+        "recomendacion": "correr sicop_reconciliar(solo_reporte=True) para HEAD a la fuente y confirmar huecos reales; luego sicop_reparar_mes para cada hueco",
+    }
 
 
 @mcp.tool()
