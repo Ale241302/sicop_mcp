@@ -644,6 +644,40 @@ def sicop_registro(limit: int = 50) -> dict:
 
 
 @mcp.tool()
+def sicop_actividad_mcp(horas: int = 24, herramienta: str = "", limit: int = 30) -> dict:
+    """Actividad reciente del MCP: quien pidio que (agente), por hora, tools top y las ultimas llamadas. Para monitorear el uso desde claude.ai u otros clientes MCP."""
+    from datetime import timedelta
+
+    from django.db.models import Count
+    from django.utils import timezone
+
+    from sicop.models import RegistroRespuesta as M
+
+    horas = max(1, min(horas, 24 * 30))
+    desde = timezone.now() - timedelta(hours=horas)
+    qs = M.objects.filter(timestamp__gte=desde)
+    if herramienta:
+        qs = qs.filter(herramienta__iexact=herramienta)
+
+    por_hora = {}
+    for ts, in qs.values_list("timestamp"):
+        k = ts.strftime("%m-%d %H:00")
+        por_hora[k] = por_hora.get(k, 0) + 1
+    por_hora = [{"hora": k, "llamadas": v} for k, v in sorted(por_hora.items())]
+
+    return {
+        "desde_hace_horas": horas,
+        "total_llamadas": qs.count(),
+        "por_hora": por_hora,
+        "herramientas_top": list(
+            qs.values("herramienta").annotate(n=Count("id")).order_by("-n")[:12]
+        ),
+        "agentes_top": list(qs.values("agente").annotate(n=Count("id")).order_by("-n")[:12]),
+        "ultimas": wrap(list(qs.order_by("-timestamp")[:limit])),
+    }
+
+
+@mcp.tool()
 def sicop_carril() -> dict:
     """Carril actual del MCP: operacion (canonico) o laboratorio (NO_APTO_PARA_DECISION)."""
     return {
