@@ -101,8 +101,7 @@ def wrap_mcp_call_tool(mcp):
         return _logged
 
     tm = getattr(mcp, "_tool_manager", None)
+    # SOLO el despacho interno (tm.call_tool): el mcp.call_tool publico lo invoca
+    # por dentro, asi que envolver ambos duplicaba cada registro. Con uno basta.
     if tm is not None and hasattr(tm, "call_tool"):
         tm.call_tool = _wrap(tm.call_tool)
-    # tambien la llamada programatica (si algun cliente la usa)
-    if hasattr(mcp, "call_tool"):
-        mcp.call_tool = _wrap(mcp.call_tool)
