@@ -41,5 +41,19 @@
 </table>
 </div>
 
+<h2>Actividad MCP reciente (últimas 24 h)</h2>
+<div class="card">
+<p><b>{{ actividad.total }}</b> llamadas{% if actividad.total %} · por tool: {% for h, n in actividad.por_herramienta %}<code>{{ h }}</code> ×{{ n }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</p>
+<table>
+<tr><th>Hora</th><th>Tool</th><th>Parámetros</th><th>Cuánto tardamos</th></tr>
+{% for u in actividad.ultimas %}
+<tr><td>{{ u.hora }}</td><td><code>{{ u.herramienta }}</code></td><td>{{ u.params }}</td><td class="r">{% if u.ms %}{{ u.ms }} ms{% else %}—{% endif %}</td></tr>
+{% empty %}
+<tr><td colspan="4">Sin llamadas en las últimas 24 h.</td></tr>
+{% endfor %}
+</table>
+<p class="sobre"><b>Nota</b> Tiempo = lo que tardó el servidor SICOP en devolver la respuesta a Claude.ai para esa consulta. Muestra hasta 15 llamadas (deduplicadas).</p>
+</div>
+
 <p class="sobre"><b>Reglas de medición</b> Toda cifra declara su nivel: captación (adjudicaciones), ejecución (órdenes de pedido) o entrega (recepciones). Monedas: CRC | USD | EUR | JPY | GBP — nunca sumar sin convertir. Los huecos de datos están declarados en la deriva.</p>
 {% endblock %}

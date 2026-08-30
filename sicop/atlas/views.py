@@ -122,6 +122,52 @@ def calidad(request):
     return render(request, "atlas/calidad.html", ctx)
 
 
+def _actividad_mcp(dedup=True):
+    """Actividad reciente del MCP: llamadas deduplicadas + resumen (quien pidio que y cuanto tardo)."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from sicop.models import RegistroRespuesta
+
+    desde = timezone.now() - timedelta(hours=24)
+    rows = list(RegistroRespuesta.objects.filter(timestamp__gte=desde).order_by("-id")[:500])
+
+    def clave(r):
+        # dedupe de registros duplicados historicos (misma tool+params+mismo segundo)
+        ts = (r.timestamp or desde).strftime("%Y%m%d%H%M%S")
+        return (r.herramienta, (r.parametros or "")[:120], ts)
+
+    if dedup:
+        vistos, unicos = set(), []
+        for r in rows:
+            k = clave(r)
+            if k not in vistos:
+                vistos.add(k)
+                unicos.append(r)
+        rows = unicos
+
+    por_herramienta = {}
+    for r in rows:
+        h = r.herramienta or "?"
+        por_herramienta[h] = por_herramienta.get(h, 0) + 1
+    por_herramienta = sorted(por_herramienta.items(), key=lambda kv: -kv[1])
+
+    ultimas = []
+    for r in rows[:15]:
+        params = (r.parametros or "").replace("\u20a1", "")
+        if len(params) > 60:
+            params = params[:60] + "…"
+        ultimas.append({
+            "hora": (r.timestamp or desde).strftime("%d/%m %H:%M:%S"),
+            "herramienta": r.herramienta,
+            "params": params,
+            "ms": r.duracion_ms,
+            "agente": r.agente,
+        })
+    return {"total": len(rows), "por_herramienta": por_herramienta, "ultimas": ultimas}
+
+
 def mcp_docs(request):
     """Documentacion del servidor MCP: como conectarse, tools, ejemplos y tiempos."""
     from django.core.cache import cache
@@ -180,6 +226,7 @@ def mcp_docs(request):
     return render(request, "atlas/mcp.html", {
         "tools": tools, "bench": bench, "ejemplos": ejemplos_uso,
         "total_tools": len(tools), "titulo": "Documentación MCP",
+        "actividad": _actividad_mcp(),
     })
 
 
