@@ -46,7 +46,7 @@
 
   celery-worker:
     build: .
-    command: celery -A config worker -l info --concurrency=2
+    command: celery -A config worker -l info --concurrency=4
     volumes:
       - .:/app
       - ${SICOP_DATA_DIR:-/opt/sicop_data/Salidas}:/data/salidas
