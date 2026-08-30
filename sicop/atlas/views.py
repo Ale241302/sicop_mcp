@@ -93,8 +93,23 @@ def procedimiento(request, nro):
 
 
 def calidad(request):
+    from django.core.cache import cache
+
     from sicop.models import (CtlDeriva, CtlTest, CtlCorrida, CatalogoCampo,
                               VigilanciaCheck, BronzeFila, CorridaPaso)
+
+    # el count de bronze (89M filas) es caro -> se cachea ~6h (solo cambia en el ciclo)
+    try:
+        bronze = cache.get("sicop:bronze:count")
+    except Exception:  # noqa: BLE001
+        bronze = None
+    if bronze is None:
+        bronze = BronzeFila.objects.count()
+        try:
+            cache.set("sicop:bronze:count", bronze, 6 * 3600)
+        except Exception:  # noqa: BLE001
+            pass
+
     ctx = {
         "deriva": list(CtlDeriva.objects.order_by("CONJUNTO", "ANIO", "CAMPO")[:300]),
         "tests": list(CtlTest.objects.order_by("-id")[:50]),
@@ -102,7 +117,7 @@ def calidad(request):
         "campos": list(CatalogoCampo.objects.exclude(TRAMPA__isnull=True)[:40]),
         "vigilancia": list(VigilanciaCheck.objects.order_by("-fecha")[:20]),
         "pasos": list(CorridaPaso.objects.order_by("-id")[:60]),
-        "bronze": BronzeFila.objects.count(),
+        "bronze": bronze,
     }
     return render(request, "atlas/calidad.html", ctx)
 
