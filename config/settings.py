@@ -122,6 +122,9 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_IGNORE_RESULT = False
 CELERY_TASK_TRACK_STARTED = True
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+# --- zona horaria: el cron debe disparar a las 06:00 y 18:00 hora de CR ---
+# (sin esto, el beat en UTC dispara a las 00:00 y 12:00 CR).
+CELERY_TIMEZONE = "America/Costa_Rica"
 # --- robustez: evitar re-entregas del broker cuando el worker esta ocupado ---
 # El worker con prefetch=1 no reclama mas mensajes de los que puede correr;
 # con un visibility_timeout mayor, un task largo (ciclo ~10 min) no se
