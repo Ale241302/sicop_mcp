@@ -537,16 +537,22 @@ def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
     lc_por_mes = {r["MES_PUBLICACION"]: r["n"] for r in
                   SicopLineasCartel.objects.values("MES_PUBLICACION").annotate(n=Count("id"))}
 
-    huecos = []
-    for m in meses:
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _check(m):
+        # I/O-bound (HTTP HEAD a la fuente) -> paralelo; ~10 concurrentes
         h = vigilancia._head(str(m))
-        existe_fuente = h.get("status") == 200 and not h.get("error")
-        if not existe_fuente:
-            continue
-        n_lc = lc_por_mes.get(str(m), 0)
-        if n_lc == 0:
-            huecos.append({"aaaamm": str(m), "lineas_cartel": n_lc,
-                           "fuente": "zip publicado, base vacia (sin lineas_cartel)"})
+        existe = h.get("status") == 200 and not h.get("error")
+        return (m, existe, lc_por_mes.get(str(m), 0))
+
+    huecos = []
+    with ThreadPoolExecutor(max_workers=10) as ex:
+        for m, existe_fuente, n_lc in ex.map(_check, meses):
+            if not existe_fuente:
+                continue
+            if n_lc == 0:
+                huecos.append({"aaaamm": str(m), "lineas_cartel": n_lc,
+                               "fuente": "zip publicado, base vacia (sin lineas_cartel)"})
 
     reparados = []
     if not solo_reporte and huecos:
