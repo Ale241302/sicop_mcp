@@ -65,9 +65,16 @@ def consolidar_resultados(self, corrida=None):
 
 
 @shared_task(bind=True, name="sicop.reparar_mes")
-def reparar_mes(self, aaaamm, corrida=None):
-    """REPARA un mes: re-extrae el anio desde la fuente, recarga, broncea el mes,
-    reconstruye silver + gold y corre el gate. Para llenar huecos / datos vacios.
+def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
+    """REPARA un mes: carga el anio desde la extraccion ya presente (mode liviano),
+    recarga Postgres, broncea el mes, reconstruye silver + gold y corre el gate.
+    Con reextraer=True fuerza re-descarga completa del anio desde la fuente.
+
+    Modo liviano (reextraer=False, por defecto): el extractor corre SIN --force,
+    asi que salta los meses ya en OK del manifiesto (no re-descarga, no re-extrae;
+    las reescrituras reales de la fuente las detecta el ciclo diario). La recarga
+    es no-op si el hash no cambio. El repair queda en bronze(month)+silver+gold,
+    sin el pico de ~200GB de disco del re-extraido.
 
     Lock global (Redis): las reparaciones se serializan porque el extractor
     escribe el mismo anio en el mismo directorio y silver/gold son globales."""
@@ -99,8 +106,9 @@ def reparar_mes(self, aaaamm, corrida=None):
         extractor = os.path.join(settings.SICOP_SCRIPTS_DIR, "harness_actualizado", "sicop_loop.py")
         out = settings.SICOP_RECOVERY_DIR
 
-        rc = subprocess.run([sys.executable, extractor, "--year", y, "--pesados", "--force",
-                             "--no-vigilancia", "--out", out], cwd=os.path.dirname(extractor)).returncode
+        rc = subprocess.run([sys.executable, extractor, "--year", y, "--pesados",
+                             "--no-vigilancia", "--out", out] + (["--force"] if reextraer else []),
+                            cwd=os.path.dirname(extractor)).returncode
         if rc != 0:
             control.cerrar_corrida(corrida, "BLOQUEADO", notas=f"extractor rc={rc}")
             return {"corrida": corrida, "estado": "ERROR", "extractor_rc": rc}

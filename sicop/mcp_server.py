@@ -502,18 +502,22 @@ def sicop_verificar_procedimiento(nro_sicop: str) -> dict:
 
 
 @mcp.tool()
-def sicop_reparar_mes(aaaamm: str) -> dict:
-    """REPARA un mes (AAAAMM, ej 202608): re-extrae el anio desde la fuente SICOP,
-    recarga Postgres, broncea el mes, reconstruye silver+gold y corre el gate.
+def sicop_reparar_mes(aaaamm: str, reextraer: bool = False) -> dict:
+    """REPARA un mes (AAAAMM, ej 202608): modo liviano por defecto (NO re-descarga:
+    reutiliza la extraccion del anio ya en SICOP_RECOVERY_DIR; las reescrituras reales
+    de la fuente las detecta el ciclo diario), broncea el mes, reconstruye silver+gold
+    y corre el gate. Con reextraer=True fuerza re-descarga completa del anio desde la
+    fuente (lento y usa ~200 GB de disco transitorio; solo si sabes que cambio de verdad).
     Es async: devuelve la corrida; consulta sicop_corrida_pasos para el resultado."""
     from sicop.tasks import reparar_mes as t
 
     aaaamm = aaaamm.strip()
     if not (len(aaaamm) == 6 and aaaamm.isdigit()):
         return {"error": "aaaamm debe ser YYYYMM (ej 202608)"}
-    res = t.delay(aaaamm)
+    res = t.delay(aaaamm, reextraer=reextraer)
     return {"aaaamm": aaaamm, "corrida": f"reparar-{aaaamm}", "estado": "ENCOLADO",
-            "nota": "monitorear con sicop_corrida_pasos; tarda ~20 min"}
+            "reextraer": reextraer,
+            "nota": "modo liviano (sin re-descarga) por defecto; monitorear con sicop_corrida_pasos"}
 
 
 @mcp.tool()
