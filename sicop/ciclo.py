@@ -15,7 +15,7 @@ from datetime import datetime
 
 from django.utils import timezone
 
-from . import control, resultado, senales, vigilancia
+from . import autocorregir, control, resultado, senales, vigilancia
 from .models import CorridaPaso, Senal
 
 logger = logging.getLogger(__name__)
@@ -157,5 +157,10 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
                                notas=f"senales={n}; tests={len(fallidos)} fallidos")
     else:
         control.cerrar_corrida(corrida, "OK", notas=f"senales={n}")
+
+    # 6) AUTOCORREGIR: el cron detecta FAIL/BLOQUEADO/EN_CURSO colgadas y las
+    # corrige dejando log (solo re-corre gold+tests una vez, boundado 6h).
+    _paso(corrida, "autocorregir", lambda: autocorregir.corregir(),
+          detalle_ok=lambda a: "; ".join(a))
     print(f"== fin ciclo {corrida} ==", flush=True)
     return {"corrida": corrida, "senales": n, "cambios": cambios}

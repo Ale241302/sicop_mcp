@@ -709,6 +709,16 @@ def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
 
 
 @mcp.tool()
+def sicop_autocorregir() -> dict:
+    """Autocorreccion del cron: detecta FAIL de tests, corridas BLOQUEADO y
+    EN_CURSO colgadas y las corrige (re-corre gold+tests una vez, boundado 6h),
+    dejando log. Es el mismo paso que corre el ciclo diario 06:00/18:00."""
+    from sicop.autocorregir import corregir, detectar
+
+    return {"problemas": detectar(), "acciones": corregir()}
+
+
+@mcp.tool()
 def sicop_diagnostico() -> dict:
     """Diagnostico de salud del sistema: que necesita atencion (tests fallidos,
     meses con huecos, ultima corrida, recencia de datos, senales). La base para
