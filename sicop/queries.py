@@ -174,7 +174,25 @@ def producto(codigo):
 
 def expediente(nro_sicop):
     row = GoldExpedienteTrazabilidad.objects.filter(NRO_SICOP=nro_sicop).first()
-    return to_plain(row)
+    if row:
+        return to_plain(row)
+    # fallback: la trazabilidad derivada solo cubre 2025-2026 (~18% de carteles);
+    # si el procedimiento no esta, contar presencia directo desde tablas crudas.
+    from .models import (SicopAdjudicaciones, SicopAdjudicacionesFirme, SicopCarteles,
+                         SicopContratos, SicopOfertas, SicopOrdenesPedido,
+                         SicopRecepciones)
+    return to_plain({
+        "NRO_SICOP": nro_sicop,
+        "FALLBACK_CRUDO": True,
+        "cartel": SicopCarteles.objects.filter(NRO_SICOP=nro_sicop).count(),
+        "ofertas": SicopOfertas.objects.filter(NRO_SICOP=nro_sicop).count(),
+        "adjudicacion_firme": SicopAdjudicacionesFirme.objects.filter(NRO_SICOP=nro_sicop).count(),
+        "adjudicacion": SicopAdjudicaciones.objects.filter(NRO_SICOP=nro_sicop).count(),
+        "contratos": SicopContratos.objects.filter(NRO_SICOP=nro_sicop).count(),
+        "ordenes": SicopOrdenesPedido.objects.filter(NRO_SICOP=nro_sicop).count(),
+        "recepciones": SicopRecepciones.objects.filter(NRO_SICOP=nro_sicop).count(),
+        "nota": "la trazabilidad derivada solo cubre 2025-2026; conteos directos desde tablas crudas",
+    })
 
 
 def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, objeto=None, limit=50):
@@ -536,7 +554,7 @@ def ordenes_proveedor(cedula, anio=None, limit=1000):
     n_crc = sum(1 for r in rows if r.MONEDA_ORDEN == "CRC")
     otras = [r for r in rows if (r.MONEDA_ORDEN or "") not in ("", "CRC")]
     n_otras = len(otras)
-    total_crc = sum((r.TOTAL_ORDEN or 0) for r in rows if r.MONEDA_ORDEN == "CRC")
+    total_crc = float(sum((r.TOTAL_ORDEN or 0) for r in rows if r.MONEDA_ORDEN == "CRC"))
     total_otras_convertido = (float(sum((r.TOTAL_ORDEN or 0) for r in otras)) * tc_dia) if (tc_dia and n_otras) else None
     ordenes_plain = []
     for r in rows:

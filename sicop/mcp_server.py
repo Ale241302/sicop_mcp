@@ -144,6 +144,21 @@ def sicop_campo_buscar(termino: str, limit: int = 20) -> dict:
 
 
 @mcp.tool()
+def sicop_buscar_procedimiento(numero_procedimiento: str, limit: int = 20) -> dict:
+    """Traduce el numero humano del procedimiento (ej '2023LE-000016-0000200001', el que sale en carteles y correos) al NRO_SICOP canonico."""
+    from sicop.models import SicopCarteles
+
+    q = (numero_procedimiento or "").strip()
+    if not q:
+        return {"resultados": [], "total": 0}
+    qs = SicopCarteles.objects.filter(NRO_PROCEDIMIENTO__icontains=q)
+    rows = list(qs.values("NRO_SICOP", "NRO_PROCEDIMIENTO", "CEDULA_INSTITUCION",
+                          "TIPO_PROCEDIMIENTO", "FECHA_PUBLICACION", "MONTO_EST")[:limit])
+    return {"resultados": rows, "total": len(rows),
+            "nota": "una vez tengas el NRO_SICOP, usalo con sicop_verificar_procedimiento / sicop_expediente / sicop_competencia_procedimiento"}
+
+
+@mcp.tool()
 def sicop_perdidas_baratas(cedula: str = "", familia_unspsc: str = "", limit: int = 200) -> dict:
     """Lineas donde un proveedor oferto MAS BARATO que el ganador y aun asi perdio (cola de revision, no conclusion)."""
     return queries.perdidas_baratas(cedula, familia_unspsc or None, limit)
@@ -212,13 +227,25 @@ def sicop_recursos_desenlace(nro_sicop: str = "", cedula: str = "", limit: int =
 
 @mcp.tool()
 def sicop_tiempos_por_etapa(nro_sicop: str = "", limit: int = 200) -> dict:
-    """Plazos reales entre etapas por procedimiento (dias)."""
+    """Plazos reales entre etapas por procedimiento (dias). Una fila por procedimiento (deduplicada)."""
     from sicop.models import GoldTiemposPorEtapa as M
 
     qs = M.objects.all()
     if nro_sicop:
         qs = qs.filter(NRO_SICOP=nro_sicop)
-    return wrap(list(qs.order_by("NRO_SICOP")[:limit]))
+    # la tabla gold trae una fila por linea (duplicada); dedupe a nivel procedimiento
+    rows = list(qs.order_by("NRO_SICOP")[: max(limit * 8, 1000)])
+    vistos, out = set(), []
+    for r in rows:
+        k = (r.NRO_SICOP, r.FECHA_PUBLICACION, r.FECHA_APERTURA, r.FECHA_ADJUDICACION,
+             r.FECHA_CONTRATO, r.FECHA_RECEPCION)
+        if k in vistos:
+            continue
+        vistos.add(k)
+        out.append(r)
+        if len(out) >= limit:
+            break
+    return wrap(out)
 
 
 @mcp.tool()
@@ -297,9 +324,9 @@ def sicop_catalogo_campo(tabla: str = "", campo: str = "", limit: int = 500) -> 
 
     qs = M.objects.all()
     if tabla:
-        qs = qs.filter(TABLA=tabla)
+        qs = qs.filter(TABLA__icontains=tabla)
     if campo:
-        qs = qs.filter(CAMPO=campo)
+        qs = qs.filter(CAMPO__icontains=campo)
     return wrap(list(qs.order_by("TABLA", "CAMPO")[:limit]))
 
 
@@ -316,15 +343,25 @@ def sicop_fact_requerimiento(nro_sicop: str = "", limit: int = 500) -> dict:
 
 @mcp.tool()
 def sicop_fact_oferta(nro_sicop: str = "", cedula: str = "", limit: int = 500) -> dict:
-    """Hecho de oferta: quien oferto, a que precio (crc) y en que linea."""
+    """Hecho de oferta: quien oferto, a que precio (crc) y en que linea. Monedas no-CRC convertidas con el TC de la propia fila."""
     from sicop.models import FactOferta as M
+    from sicop.queries import to_plain
 
     qs = M.objects.all()
     if nro_sicop:
         qs = qs.filter(NRO_SICOP=nro_sicop)
     if cedula:
         qs = qs.filter(CEDULA_PROVEEDOR=cedula)
-    return wrap(list(qs.order_by("NRO_SICOP", "NRO_OFERTA")[:limit]))
+    rows = list(qs.order_by("NRO_SICOP", "NRO_OFERTA")[:limit])
+    out = []
+    for r in rows:
+        d = to_plain(r)
+        if d.get("PU_OFERTADO_CRC") is None and (d.get("MONEDA_OFERTA") or "CRC") != "CRC":
+            if d.get("TC_OFERTA") and d.get("PU_OFERTADO_ORIG") is not None:
+                d["PU_OFERTADO_CRC"] = round(float(d["PU_OFERTADO_ORIG"]) * float(d["TC_OFERTA"]), 4)
+                d["CRC_CONVERTIDO_EN_RESPUESTA"] = True
+        out.append(d)
+    return {"resultados": out, "total": len(out)}
 
 
 @mcp.tool()
@@ -344,30 +381,54 @@ def sicop_fact_adjudicacion(nro_sicop: str = "", cedula: str = "", objeto_gasto:
 
 @mcp.tool()
 def sicop_fact_contrato(nro_contrato: str = "", nro_sicop: str = "", limit: int = 500) -> dict:
-    """Hecho de contrato por linea: precio contratado (crc) y descripcion (marca/modelo)."""
+    """Hecho de contrato por linea: precio contratado (crc) y descripcion (marca/modelo). Monedas no-CRC convertidas con el TC de la fila."""
     from sicop.models import FactContratoLinea as M
+    from sicop.queries import to_plain
 
     qs = M.objects.all()
     if nro_contrato:
         qs = qs.filter(NRO_CONTRATO=nro_contrato)
     if nro_sicop:
         qs = qs.filter(NRO_SICOP=nro_sicop)
-    return wrap(list(qs.order_by("NRO_CONTRATO", "SECUENCIA")[:limit]))
+    rows = list(qs.order_by("NRO_CONTRATO", "SECUENCIA")[:limit])
+    out = []
+    for r in rows:
+        d = to_plain(r)
+        if d.get("PU_CONTRATADO_CRC") is None and (d.get("MONEDA_CONTRATO") or "CRC") != "CRC":
+            if d.get("TC_CONTRATO") and d.get("PU_CONTRATADO_ORIG") is not None:
+                d["PU_CONTRATADO_CRC"] = round(float(d["PU_CONTRATADO_ORIG"]) * float(d["TC_CONTRATO"]), 4)
+                d["CRC_CONVERTIDO_EN_RESPUESTA"] = True
+        out.append(d)
+    return {"resultados": out, "total": len(out)}
 
 
 @mcp.tool()
-def sicop_fact_orden(nro_orden: str = "", cedula: str = "", anio: str = "", limit: int = 500) -> dict:
-    """Hecho de ejecucion: UNA fila por orden con TOTAL_ORDEN (solo CRC sumable). Nivel: EJECUCION."""
-    from sicop.models import FactOrden as M
+def sicop_fact_orden(nro_orden: str = "", cedula: str = "", anio: str = "", nro_sicop: str = "", limit: int = 500) -> dict:
+    """Hecho de ejecucion: UNA fila por orden con TOTAL_ORDEN (solo CRC sumable). Nivel: EJECUCION. Filtra por nro_sicop si se pasa."""
+    from sicop.models import FactOrden as M, SicopOrdenesPedido
+    from sicop.queries import to_plain
 
     qs = M.objects.all()
+    if nro_sicop:
+        nros = list(SicopOrdenesPedido.objects.filter(NRO_SICOP=nro_sicop)
+                    .values_list("NRO_ORDEN", flat=True).distinct()[:10000])
+        if not nros:
+            return {"resultados": [], "total": 0, "nota": f"sin ordenes para nro_sicop {nro_sicop}"}
+        qs = qs.filter(NRO_ORDEN__in=nros)
     if nro_orden:
         qs = qs.filter(NRO_ORDEN=nro_orden)
     if cedula:
         qs = qs.filter(CEDULA_PROVEEDOR=cedula)
     if anio:
         qs = qs.filter(FECHA_ELABORACION__year=anio)
-    return wrap(list(qs.order_by("-FECHA_ELABORACION")[:limit]))
+    rows = list(qs.order_by("-FECHA_ELABORACION")[:limit])
+    out = []
+    for r in rows:
+        d = to_plain(r)
+        if nro_sicop:
+            d["NRO_SICOP"] = nro_sicop
+        out.append(d)
+    return {"resultados": out, "total": len(out)}
 
 
 @mcp.tool()
