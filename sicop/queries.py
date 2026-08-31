@@ -258,9 +258,11 @@ COBERTURA_CRUCE = 0.626
 CAVEATS_BASE = [
     "cobertura del cruce oferta x oferente: 62,6% (1 mes 8%, acumulado)",
     "2026 parcial (corte 2026-08-25); '2026' en adjudicaciones/contratos/recepciones es actividad observada, no procedimientos nacidos 2026",
-    "conversiones de moneda usan TIPO_CAMBIO_CRC de la propia fila; monedas no CRC convertidas con el TC oficial del dia cuando esta guardado (ctl_bccr_tc)",
+    "conversiones de moneda usan TIPO_CAMBIO_CRC de la propia fila; ordenes no-CRC convertidas con TC implicito del mes (fallback TC del dia)",
+    "MES_PUBLICACION NO es el mes de publicacion real: es el mes del primer ZIP donde se vio la fila (dedup del extractor). NO usar para series temporales/estacionalidad; los datos de un procedimiento pueden vivir bajo meses anteriores.",
     "ninguna serie multianual se publica sin declarar sus huecos: consultar /api/v1/ctl-deriva (deriva por anio)",
     "lineas_* / ofertas / proveedores / recepciones / recursos / ordenes_pedido en carga (recuperacion desde Observatorio)",
+    "catalogo_productos.LINEAS_EJECUCION sale solo de lineas_contratadas+lineas_recibidas (no incluye ordenes): SKU con ejecucion sin adjudicacion respaldante son huecos de la fuente, no errores",
 ]
 
 
