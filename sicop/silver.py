@@ -268,7 +268,10 @@ def fact_orden(corrida):
         if (mon or "CRC") != "CRC":
             fec = r.get("FECHA_ELABORACION_ORDEN")
             mes = f"{fec.year:04d}{fec.month:02d}" if fec else None
-            tc = (tc_por_mes.get(mes) if mes else None) or tc_dia
+            t = (tc_por_mes.get(mes) if mes else None) or tc_dia
+            # TC plausible CRC/<moneda>: 1 < tc < 2000. Fuera de rango = dato
+            # contaminado -> no se aplica (TOTAL_ORDEN_CRC queda null, se reporta).
+            tc = t if (t and 1 < t < 2000) else None
         obj = FactOrden(
             NRO_ORDEN=nro, NRO_CONTRATO=r.get("NRO_CONTRATO"), CEDULA_PROVEEDOR=r.get("CEDULAPROVEEDOR"),
             FECHA_ELABORACION=r.get("FECHA_ELABORACION_ORDEN"), MONEDA_ORDEN=mon,
