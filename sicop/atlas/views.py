@@ -122,6 +122,99 @@ def calidad(request):
     return render(request, "atlas/calidad.html", ctx)
 
 
+def _warm_bench(clave):
+    """Benchmark de TODAS las tools (solo lectura). Se corre en background y
+    llena la cache de Redis. Excluye tools que mutan el sistema, consultan
+    servicios externos o son experimentos de Fase 4."""
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+
+        import asyncio
+        import time
+        from django.core.cache import cache
+
+        from sicop.mcp_server import mcp
+
+        BENCH_SKIP = {
+            "sicop_reparar_mes", "sicop_ciclo_diario", "sicop_registrar_resultado",
+            "sicop_cgr_buscar", "sicop_backtest_invitaciones", "sicop_holdout",
+            "sicop_ficha_esosa", "sicop_reconciliar",
+        }
+        BENCH_ARGS = {
+            "sicop_ficha_proveedor": {"cedula": "3101029593"},
+            "sicop_mercado_familia": {"familia_unspsc": "81112399"},
+            "sicop_cara_a_cara": {"cedula_a": "3101086562", "cedula_b": "3101095926"},
+            "sicop_perdidas_baratas": {"cedula": "3101095926"},
+            "sicop_precios_institucion": {"familia_unspsc": "461816"},
+            "sicop_precios_identicos": {"nro_sicop": "20230802921"},
+            "sicop_excepciones": {"cedula": "3101086562"},
+            "sicop_sanciones": {"cedula": "3101095926"},
+            "sicop_proveedor_dim": {"cedula": "3101029593"},
+            "sicop_ordenes_proveedor": {"cedula": "3101095926", "anio": "2025", "limit": 10},
+            "sicop_campo_buscar": {"termino": "UPS"},
+            "sicop_producto": {"codigo_cl": "5311160192296606"},
+            "sicop_producto_historia": {"codigo_cl": "5311160192296606"},
+            "sicop_producto_firma": {"codigo_cl": "5311160192296606"},
+            "sicop_buscar_procedimiento": {"numero_procedimiento": "2023LE-000016-0000200001"},
+            "sicop_verificar_procedimiento": {"nro_sicop": "20230802921"},
+            "sicop_competencia_procedimiento": {"nro_sicop": "20230802921"},
+            "sicop_expediente": {"nro_sicop": "20230802921"},
+            "sicop_lineas_procedimiento": {"nro_sicop": "20230802921"},
+            "sicop_regimen_evaluacion": {"nro_sicop": "20251200067"},
+            "sicop_regimen": {"nro_sicop": "20230802921"},
+            "sicop_tiempos_por_etapa": {"nro_sicop": "20230802921"},
+            "sicop_recursos_procedimiento": {"nro_sicop": "20230802921"},
+            "sicop_recursos_desenlace": {"nro_sicop": "20230802921"},
+            "sicop_invitaciones_procedimiento": {"nro_sicop": "20230802921"},
+            "sicop_invitaciones_proveedor": {"cedula": "3101095926"},
+            "sicop_invitados_vs_ofertantes": {"nro_sicop": "20230802921"},
+            "sicop_carteles_objetados": {},
+            "sicop_fact_requerimiento": {"nro_sicop": "20230802921"},
+            "sicop_fact_oferta": {"nro_sicop": "20230802921"},
+            "sicop_fact_adjudicacion": {"nro_sicop": "20230802921"},
+            "sicop_fact_contrato": {"nro_sicop": "20230802921"},
+            "sicop_fact_orden": {"nro_sicop": "20230802921", "limit": 5},
+            "sicop_fact_recepcion": {"nro_sicop": "20230802921"},
+            "sicop_mes_publicacion": {"nro_sicop": "20230802921"},
+            "sicop_ctl_deriva": {"conjunto": "adjudicaciones"},
+            "sicop_catalogo_campo": {"tabla": "carteles"},
+            "sicop_competencia_por_regimen": {},
+            "sicop_bccr_tc": {},
+            "sicop_diagnostico": {},
+            "sicop_resumen": {},
+            "sicop_gold_status": {},
+            "sicop_corrida_pasos": {},
+            "sicop_politica": {},
+            "sicop_carril": {},
+            "sicop_senales": {},
+            "sicop_resultado": {},
+            "sicop_actividad_mcp": {},
+            "sicop_registro": {},
+            "sicop_vigilancia": {},
+            "sicop_representantes": {},
+            "sicop_representante_competencia": {},
+        }
+
+        def _bm(name, args):
+            try:
+                t0 = time.time()
+                asyncio.run(mcp.call_tool(name, args))
+                return name, int((time.time() - t0) * 1000)
+            except Exception:  # noqa: BLE001
+                return name, None
+
+        todos = [(t.name, BENCH_ARGS.get(t.name, {}))
+                 for t in mcp._tool_manager.list_tools() if t.name not in BENCH_SKIP]
+        bench = {}
+        with ThreadPoolExecutor(max_workers=10) as ex:
+            for name, ms in ex.map(lambda p: _bm(*p), todos):
+                bench[name] = ms
+        bench = {k: v for k, v in sorted(bench.items(), key=lambda kv: (kv[1] is None, kv[1] or 0))}
+        cache.set(clave, bench, 6 * 3600)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _actividad_mcp(dedup=True):
     """Actividad reciente del MCP: llamadas deduplicadas + resumen (quien pidio que y cuanto tardo)."""
     from datetime import timedelta
@@ -203,89 +296,15 @@ def mcp_docs(request):
     except Exception:  # noqa: BLE001
         bench = None
     if bench is None:
-        # benchmark de TODAS las tools (solo lectura; se saltan las que mutan o
-        # golpean servicios externos). Args de ejemplo seguros por tool.
-        BENCH_SKIP = {
-            "sicop_reparar_mes", "sicop_ciclo_diario", "sicop_registrar_resultado",
-            "sicop_cgr_buscar", "sicop_backtest_invitaciones", "sicop_holdout",
-            "sicop_ficha_esosa", "sicop_reconciliar",
-        }
-        BENCH_ARGS = {
-            "sicop_ficha_proveedor": {"cedula": "3101029593"},
-            "sicop_mercado_familia": {"familia_unspsc": "81112399"},
-            "sicop_cara_a_cara": {"cedula_a": "3101086562", "cedula_b": "3101095926"},
-            "sicop_perdidas_baratas": {"cedula": "3101095926"},
-            "sicop_precios_institucion": {"familia_unspsc": "461816"},
-            "sicop_precios_identicos": {"nro_sicop": "20230802921"},
-            "sicop_excepciones": {"cedula": "3101086562"},
-            "sicop_sanciones": {"cedula": "3101095926"},
-            "sicop_proveedor_dim": {"cedula": "3101029593"},
-            "sicop_ordenes_proveedor": {"cedula": "3101095926", "anio": "2025", "limit": 10},
-            "sicop_campo_buscar": {"termino": "UPS"},
-            "sicop_producto": {"codigo_cl": "5311160192296606"},
-            "sicop_producto_historia": {"codigo_cl": "5311160192296606"},
-            "sicop_producto_firma": {"codigo_cl": "5311160192296606"},
-            "sicop_buscar_procedimiento": {"numero_procedimiento": "2023LE-000016-0000200001"},
-            "sicop_verificar_procedimiento": {"nro_sicop": "20230802921"},
-            "sicop_competencia_procedimiento": {"nro_sicop": "20230802921"},
-            "sicop_expediente": {"nro_sicop": "20230802921"},
-            "sicop_lineas_procedimiento": {"nro_sicop": "20230802921"},
-            "sicop_regimen_evaluacion": {"nro_sicop": "20251200067"},
-            "sicop_regimen": {"nro_sicop": "20230802921"},
-            "sicop_tiempos_por_etapa": {"nro_sicop": "20230802921"},
-            "sicop_recursos_procedimiento": {"nro_sicop": "20230802921"},
-            "sicop_recursos_desenlace": {"nro_sicop": "20230802921"},
-            "sicop_invitaciones_procedimiento": {"nro_sicop": "20230802921"},
-            "sicop_invitaciones_proveedor": {"cedula": "3101095926"},
-            "sicop_invitados_vs_ofertantes": {"nro_sicop": "20230802921"},
-            "sicop_carteles_objetados": {},
-            "sicop_fact_requerimiento": {"nro_sicop": "20230802921"},
-            "sicop_fact_oferta": {"nro_sicop": "20230802921"},
-            "sicop_fact_adjudicacion": {"nro_sicop": "20230802921"},
-            "sicop_fact_contrato": {"nro_sicop": "20230802921"},
-            "sicop_fact_orden": {"nro_sicop": "20230802921", "limit": 5},
-            "sicop_fact_recepcion": {"nro_sicop": "20230802921"},
-            "sicop_mes_publicacion": {"nro_sicop": "20230802921"},
-            "sicop_ctl_deriva": {"conjunto": "adjudicaciones"},
-            "sicop_catalogo_campo": {"tabla": "carteles"},
-            "sicop_competencia_por_regimen": {},
-            "sicop_bccr_tc": {},
-            "sicop_diagnostico": {},
-            "sicop_resumen": {},
-            "sicop_gold_status": {},
-            "sicop_corrida_pasos": {},
-            "sicop_politica": {},
-            "sicop_carril": {},
-            "sicop_senales": {},
-            "sicop_resultado": {},
-            "sicop_actividad_mcp": {},
-            "sicop_registro": {},
-            "sicop_vigilancia": {},
-            "sicop_representantes": {},
-            "sicop_representante_competencia": {},
-        }
-        import time
-        from concurrent.futures import ThreadPoolExecutor
-
-        def _bm(name, args):
-            try:
-                import asyncio
-                t0 = time.time()
-                asyncio.run(mcp.call_tool(name, args))
-                return name, int((time.time() - t0) * 1000)
-            except Exception:  # noqa: BLE001
-                return name, None
-
-        todos = [(t.name, BENCH_ARGS.get(t.name, {}))
-                 for t in mcp._tool_manager.list_tools() if t.name not in BENCH_SKIP]
+        # no bloquear la pagina: disparar el computo en background y devolver
+        # esta vez con una nota. El benchmark se calienta aparte.
         bench = {}
-        with ThreadPoolExecutor(max_workers=10) as ex:
-            for name, ms in ex.map(lambda p: _bm(*p), todos):
-                bench[name] = ms
-        bench = {k: v for k, v in sorted(bench.items(), key=lambda kv: (kv[1] is None, kv[1] or 0))}
         try:
-            cache.set(clave, bench, 6 * 3600)
+            import threading
+
+            threading.Thread(target=_warm_bench, args=(clave,), daemon=True).start()
         except Exception:  # noqa: BLE001
+            pass
             pass
 
     ejemplos_uso = [
