@@ -4,6 +4,7 @@ from django.db import models
 
 class TimestampedMixin(models.Model):
     ARCHIVO_ORIGEN = models.TextField(blank=True, null=True, db_index=True)
+    MES_ZIP = models.TextField(blank=True, null=True, db_index=True)
     MES_PUBLICACION = models.TextField(blank=True, null=True, db_index=True)
 
     class Meta:
