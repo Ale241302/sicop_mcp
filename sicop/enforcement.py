@@ -62,15 +62,17 @@ def pruebas_politica(corrida_id="politica"):
     r["p2_no_sql_libre"] = _test(corrida_id, "p2_no_sql_libre", not has_sql,
                                  "no existe /api/v1/sql/", "no SQL libre")
 
-    # P3: no mezclar monedas en el hecho de orden (CRC solo en columna CRC).
-    # Moneda vacia/NULL = CRC por convencion (igual que silver y el test gate):
-    # solo cuentan filas con moneda EXPLICITA no-CRC que tengan total CRC.
+    # P3: no mezclar monedas en el hecho de orden (CRC solo columna CRC).
+    # Desde 2026-08-31 fact_orden CONVIERTE no-CRC con TC_APLICADO explicito:
+    # la mezcla prohibida es CRC SIN TC (conversion silenciosa). Moneda vacia/
+    # NULL = CRC por convencion.
     mezcla = (FactOrden.objects.exclude(TOTAL_ORDEN_CRC__isnull=True)
+              .filter(TC_APLICADO__isnull=True)
               .exclude(MONEDA_ORDEN="CRC")
               .exclude(MONEDA_ORDEN__isnull=True)
               .exclude(MONEDA_ORDEN="").count())
     r["p3_no_mezcla_monedas"] = _test(corrida_id, "p3_no_mezcla_monedas", mezcla == 0,
-                                      f"{mezcla} filas", "0")
+                                      f"{mezcla} filas CRC sin TC", "0")
 
     # P4: la API no expone secretos en la raiz/docs
     r["p4_secretos_no_servidos"] = _test(corrida_id, "p4_secretos_no_servidos", True,

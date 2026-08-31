@@ -48,10 +48,15 @@ def run_tests(corrida_id):
     results["clave_unica_requerimiento"] = _test(corrida_id, "clave_unica_requerimiento",
                                                  tasa < 2, f"{tasa:.2f}% repetidas ({dup})", "<2% (cross-anio legitimo)")
 
-    # 2. no mezclar monedas: fact_orden solo convierte CRC (moneda vacia/NULL = CRC por convencion)
-    mezcla = FactOrden.objects.exclude(TOTAL_ORDEN_CRC__isnull=True).exclude(MONEDA_ORDEN="CRC").exclude(MONEDA_ORDEN__isnull=True).exclude(MONEDA_ORDEN="").count()
+    # 2. no mezclar monedas: toda fila no-CRC con TOTAL_ORDEN_CRC DEBE tener
+    #    TC_APLICADO (conversion explicita y auditable). CRC sin TC = mezcla
+    #    silenciosa de monedas (prohibido). Antes no se convertia nada no-CRC;
+    #    desde 2026-08-31 fact_orden convierte con TC implicito por mes.
+    sin_tc = (FactOrden.objects.exclude(TOTAL_ORDEN_CRC__isnull=True)
+              .exclude(MONEDA_ORDEN__isnull=True).exclude(MONEDA_ORDEN__in=["", "CRC"])
+              .filter(TC_APLICADO__isnull=True).count())
     results["no_mezcla_monedas_orden"] = _test(corrida_id, "no_mezcla_monedas_orden",
-                                               mezcla == 0, f"{mezcla} filas CRC!=moneda", "0")
+                                               sin_tc == 0, f"{sin_tc} no-CRC con CRC sin TC", "0 (toda conversion con TC)")
 
     # 3. match cartel<->oferta en [30%, 95%] (cobertura real 39.6% con el cruce completo)
     n_requer = FactRequerimiento.objects.values("NRO_SICOP").distinct().count()
