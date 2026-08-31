@@ -600,6 +600,56 @@ def catalogo_campo():
     print(f"catalogo_campo: {CatalogoCampo.objects.count()} campos documentados", flush=True)
 
 
+def expediente_trazabilidad():
+    """Reconstruye la trazabilidad de expedientes sobre el corpus COMPLETO
+    2020-2026. Antes la generaba el extractor POR ANIO con sobrescritura, asi
+    que solo cubria la ventana del ultimo anio procesado (2025-2026, ~18% de
+    carteles). Esta derivada la calcula desde las tablas crudas para TODOS los
+    procedimientos. NUM_TRAMOS = tramos completados (suma de flags S).
+    """
+    from .models import (GoldExpedienteTrazabilidad, SicopAdjudicaciones,
+                         SicopAdjudicacionesFirme, SicopCarteles, SicopContratos,
+                         SicopGarantias, SicopLineasRecibidas,
+                         SicopOfertas, SicopRecepciones)
+
+    GoldExpedienteTrazabilidad.objects.all().delete()
+    sets = {
+        "T_CARTEL": set(SicopCarteles.objects.values_list("NRO_SICOP", flat=True).distinct()),
+        "T_OFERTAS": set(SicopOfertas.objects.values_list("NRO_SICOP", flat=True).distinct()),
+        "T_ACTO_FIRME": set(SicopAdjudicacionesFirme.objects.values_list("NRO_SICOP", flat=True).distinct()),
+        "T_ADJUDICADO": set(SicopAdjudicaciones.objects.values_list("NRO_SICOP", flat=True).distinct()),
+        "T_CONTRATO": set(SicopContratos.objects.values_list("NRO_SICOP", flat=True).distinct()),
+        "T_GARANTIA": set(SicopGarantias.objects.values_list("NRO_SICOP", flat=True).distinct()),
+        "T_RECIBIDO": set(SicopRecepciones.objects.values_list("NRO_SICOP", flat=True).distinct())
+        | set(SicopLineasRecibidas.objects.values_list("NRO_SICOP", flat=True).distinct()),
+    }
+    universe = set()
+    for s in sets.values():
+        universe |= s
+    cartel_meta = {}
+    for r in SicopCarteles.objects.values("NRO_SICOP", "NRO_PROCEDIMIENTO", "CEDULA_INSTITUCION").iterator():
+        cartel_meta.setdefault(r["NRO_SICOP"], r)
+
+    batch = []
+    for nro in sorted(universe):
+        m = cartel_meta.get(nro, {})
+        flags = {k: "S" if nro in s else "N" for k, s in sets.items()}
+        obj = GoldExpedienteTrazabilidad(
+            NRO_SICOP=nro, NUMERO_PROCEDIMIENTO=m.get("NRO_PROCEDIMIENTO"),
+            CEDULA_INSTITUCION=m.get("CEDULA_INSTITUCION"),
+            T_CARTEL=flags["T_CARTEL"], T_OFERTAS=flags["T_OFERTAS"],
+            T_ACTO_FIRME=flags["T_ACTO_FIRME"], T_ADJUDICADO=flags["T_ADJUDICADO"],
+            T_CONTRATO=flags["T_CONTRATO"], T_GARANTIA=flags["T_GARANTIA"],
+            T_RECIBIDO=flags["T_RECIBIDO"],
+            NUM_TRAMOS=sum(1 for v in flags.values() if v == "S"),
+        )
+        batch.append(obj)
+        if len(batch) >= BATCH:
+            _flush(GoldExpedienteTrazabilidad, batch)
+    _flush(GoldExpedienteTrazabilidad, batch)
+    print(f"expediente_trazabilidad: {GoldExpedienteTrazabilidad.objects.count()} procedimientos trazados (corpus completo)", flush=True)
+
+
 ALL = {
     'producto_firma': producto_firma,
     'recursos_desenlace': recursos_desenlace,
@@ -609,5 +659,6 @@ ALL = {
     'regimen_evaluacion': regimen_evaluacion,
     'ctl_deriva': ctl_deriva,
     'catalogo_campo': catalogo_campo,
+    'expediente_trazabilidad': expediente_trazabilidad,
 }
 

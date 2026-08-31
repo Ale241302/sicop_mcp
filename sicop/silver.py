@@ -40,13 +40,19 @@ def _cl(cod24):
 
 
 def _crc(monto, moneda, tc):
+    """Convierte monto a CRC usando el TC de la propia fila.
+
+    Bug corregido 2026-08-31: `monto * float(tc)` lanzaba TypeError
+    (Decimal * float) y la excepcion se tragaba en silencio -> TODAS las filas
+    no-CRC quedaban con *_CRC null aunque tuvieran TC. Se convierte a float.
+    """
     if monto is None:
         return None
     if (moneda or "CRC") == "CRC":
         return monto
     if tc:
         try:
-            return monto * float(tc)
+            return float(monto) * float(tc)
         except (TypeError, ValueError):
             return None
     return None
@@ -216,9 +222,33 @@ def fact_contrato_linea(corrida):
 
 
 def fact_orden(corrida):
-    """Grano: UNA fila por NRO_ORDEN (TOTAL_ORDEN una sola vez; n_lineas aparte)."""
+    """Grano: UNA fila por NRO_ORDEN (TOTAL_ORDEN una sola vez; n_lineas aparte).
+
+    Las ordenes en moneda != CRC se convierten con el TC implicito MEDIANO del
+    mes (derivado de lineas_contratadas de la propia fuente), fallback al TC del
+    dia. Total CRC sumable; las ES_OUTLIER se marcan y NO deben sumarse.
+    """
     FactOrden.objects.all().delete()
     now = corrida_now()
+    # TC implicito por mes (mediana CRC/USD de contratos en moneda != CRC)
+    tc_por_mes = {}
+    vals = {}
+    for mes, tc in (SicopLineasContratadas.objects
+                    .exclude(TIPO_MONEDA__in=["", "CRC"])
+                    .exclude(TIPO_MONEDA__isnull=True)
+                    .exclude(TIPO_CAMBIO_CRC__isnull=True)
+                    .values_list("MES_PUBLICACION", "TIPO_CAMBIO_CRC")):
+        vals.setdefault(mes, []).append(float(tc))
+    for mes, v in vals.items():
+        v.sort()
+        tc_por_mes[mes] = v[len(v) // 2]
+    tc_dia = None
+    try:
+        from .queries import _tc_del_dia
+        tc_dia = _tc_del_dia()
+    except Exception:  # noqa: BLE001
+        pass
+
     ords = {}
     for r in SicopOrdenesPedido.objects.values(
             "NRO_ORDEN", "NRO_CONTRATO", "CEDULAPROVEEDOR", "FECHA_ELABORACION_ORDEN",
@@ -229,15 +259,20 @@ def fact_orden(corrida):
     for nro, r in ords.items():
         total = r.get("TOTAL_ORDEN")
         mon = r.get("MONEDA_ORDEN")
+        tc = None
+        if (mon or "CRC") != "CRC":
+            fec = r.get("FECHA_ELABORACION_ORDEN")
+            mes = f"{fec.year:04d}{fec.month:02d}" if fec else None
+            tc = (tc_por_mes.get(mes) if mes else None) or tc_dia
         obj = FactOrden(
             NRO_ORDEN=nro, NRO_CONTRATO=r.get("NRO_CONTRATO"), CEDULA_PROVEEDOR=r.get("CEDULAPROVEEDOR"),
             FECHA_ELABORACION=r.get("FECHA_ELABORACION_ORDEN"), MONEDA_ORDEN=mon,
-            TOTAL_ORDEN_ORIG=total, TC_APLICADO=None,
-            TOTAL_ORDEN_CRC=total if (mon or "CRC") == "CRC" else None,
+            TOTAL_ORDEN_ORIG=total, TC_APLICADO=tc,
+            TOTAL_ORDEN_CRC=_crc(total, mon, tc),
             ES_OUTLIER="S" if total and abs(total) > OUTLIER else "N",
             ESTADO_ORDEN=r.get("ESTADO_ORDEN"), N_LINEAS=r.get("N_LINEAS"),
             OBSERVADO_DESDE=now, ES_VIGENTE=True,
-            HASH_FILA=_h(nro, r.get("NRO_CONTRATO"), total, mon),
+            HASH_FILA=_h(nro, r.get("NRO_CONTRATO"), total, mon, tc),
             CORRIDA_ID=corrida,
         )
         batch.append(obj)
@@ -246,7 +281,7 @@ def fact_orden(corrida):
             batch = []
     if batch:
         FactOrden.objects.bulk_create(batch, batch_size=2000)
-    print(f"fact_orden: {FactOrden.objects.count()} (dedupe por NRO_ORDEN)", flush=True)
+    print(f"fact_orden: {FactOrden.objects.count()} (dedupe por NRO_ORDEN; TC por mes implicito)", flush=True)
 
 
 def fact_recepcion(corrida):
