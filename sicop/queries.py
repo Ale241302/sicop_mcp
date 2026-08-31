@@ -47,6 +47,51 @@ def _tc_del_dia():
         return None
 
 
+def resolver_procedimientos(nros):
+    """Mapa NRO_SICOP -> label humano {NRO_PROCEDIMIENTO, TIPO_PROCEDIMIENTO,
+    INSTITUCION, PROCEDIMIENTO_LABEL}. Usado por el MCP para que el chat muestre
+    el numero de procedimiento y la institucion en vez del codigo crudo."""
+    from .models import SicopCarteles, SicopInstituciones
+
+    nros = [str(n) for n in nros if n]
+    if not nros:
+        return {}
+    cart = {}
+    for r in SicopCarteles.objects.filter(NRO_SICOP__in=nros).values(
+            "NRO_SICOP", "NRO_PROCEDIMIENTO", "CEDULA_INSTITUCION", "TIPO_PROCEDIMIENTO"):
+        cart.setdefault(r["NRO_SICOP"], r)
+    ceds = {r.get("CEDULA_INSTITUCION") for r in cart.values() if r.get("CEDULA_INSTITUCION")}
+    inst = {}
+    if ceds:
+        for r in SicopInstituciones.objects.filter(CEDULA__in=ceds).values("CEDULA", "NOMBRE_INSTITUCION"):
+            inst.setdefault(r["CEDULA"], r["NOMBRE_INSTITUCION"])
+    out = {}
+    for nro, r in cart.items():
+        nombre_inst = inst.get(r.get("CEDULA_INSTITUCION")) or r.get("CEDULA_INSTITUCION")
+        nproc = r.get("NRO_PROCEDIMIENTO")
+        out[nro] = {
+            "NRO_PROCEDIMIENTO": nproc,
+            "TIPO_PROCEDIMIENTO": r.get("TIPO_PROCEDIMIENTO"),
+            "INSTITUCION": nombre_inst,
+            "PROCEDIMIENTO_LABEL": f"{nproc} · {nombre_inst}" if nproc else (nombre_inst or nro),
+        }
+    return out
+
+
+def resolver_proveedores(cedulas):
+    """Mapa CEDULA_PROVEEDOR -> NOMBRE_PROVEEDOR (label humano)."""
+    from .models import SicopProveedores
+
+    cedulas = [str(c) for c in cedulas if c]
+    if not cedulas:
+        return {}
+    out = {}
+    for r in (SicopProveedores.objects.filter(CEDULA_PROVEEDOR__in=cedulas)
+              .values("CEDULA_PROVEEDOR", "NOMBRE_PROVEEDOR")):
+        out.setdefault(r["CEDULA_PROVEEDOR"], r["NOMBRE_PROVEEDOR"])
+    return out
+
+
 def resumen():
     """Conteos por tabla, cacheados ~6h (los datos solo cambian en el ciclo
     diario 06:00/18:00). Evita contar 55 tablas (incl. 42M filas) por request."""
