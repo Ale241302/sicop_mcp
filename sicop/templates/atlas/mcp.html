@@ -14,6 +14,12 @@
 <tr><td>Protocolo</td><td>streamable-http (MCP 2.x)</td></tr>
 </table>
 <p class="sobre"><b>Cómo usarlo en Claude.ai</b> Configuración → Conectores → agregar servidor remoto → pegar la URL → guardar. Luego preguntale a Claude con lenguaje natural (ver ejemplos).</p>
+<p class="sobre"><b>Desde otro cliente MCP (HTTP crudo)</b> Inicializá la sesión y llamá tools con streamable-http:
+<code style="display:block;white-space:pre-wrap;margin-top:6px">curl -X POST https://sicop.vlinte.work/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"mi-app","version":"1"}}}'</code>
+La respuesta trae el <code>mcp-session-id</code> en el header; usalo en las llamadas siguientes (<code>tools/list</code>, <code>tools/call</code>).</p>
 </div>
 
 <h2>Ejemplos de preguntas</h2>
@@ -33,13 +39,42 @@
 <p class="sobre"><b>Nota</b> Medidos contra el servidor público. Consultas pesadas (ranking, cartera) pueden tardar más; el resumen y el TC del día están cacheados.</p>
 </div>
 
-<h2>Todas las tools ({{ total_tools }})</h2>
+<style>
+details.tool-card{border:1px solid var(--borde,#d5d9de);border-radius:8px;margin:6px 0;background:#fff}
+details.tool-card summary{cursor:pointer;padding:8px 12px;font-weight:600;color:#0f3b5e}
+details.tool-card summary .sobre{font-weight:400}
+details.tool-card[open]{border-color:#2b8a3e}
+details.tool-card[open] summary{background:#f0f7f1;color:#1b5e20}
+.tool-detalle{padding:8px 14px 12px;border-top:1px dashed #d5d9de}
+.tool-detalle p{margin:6px 0}
+.tool-detalle ul{margin:4px 0 6px 18px}
+</style>
+
+<h2>Guía por tool ({{ total_tools }})</h2>
+{% for g in grupos %}
+<h3>{{ g.categoria }} <span class="sobre">({{ g.tools|length }})</span></h3>
 <div class="card">
-<table>
-<tr><th>Tool</th><th>Parámetros</th><th>Qué hace</th></tr>
-{% for t in tools %}<tr><td><code>{{ t.name }}</code></td><td>{{ t.params }}</td><td>{{ t.desc }}</td></tr>{% endfor %}
-</table>
+{% for t in g.tools %}
+<details class="tool-card">
+<summary><code>{{ t.name }}</code>{% if t.doc %}<span class="sobre"> · {{ t.doc.para|truncatechars:90 }}</span>{% else %}<span class="sobre"> · {{ t.desc|truncatechars:90 }}</span>{% endif %}</summary>
+<div class="tool-detalle">
+{% if t.doc %}
+<p><b>Qué hace:</b> {{ t.doc.para }}</p>
+<p><b>Cómo preguntarle:</b> <em>«{{ t.doc.preguntar }}»</em></p>
+<p><b>Parámetros:</b> <code>{{ t.params }}</code> &nbsp;·&nbsp; <b>Ejemplo de args:</b> <code>{{ t.doc.args }}</code></p>
+<p><b>Qué devuelve:</b> {{ t.doc.respuesta }}</p>
+<p><b>Cómo NO usarla:</b></p>
+<ul>{% for n in t.doc.no_usar %}<li>{{ n }}</li>{% endfor %}</ul>
+<p><b>Casos de uso:</b> {{ t.doc.casos }}</p>
+{% else %}
+<p><b>Qué hace:</b> {{ t.desc }}</p>
+<p><b>Parámetros:</b> <code>{{ t.params }}</code></p>
+{% endif %}
 </div>
+</details>
+{% endfor %}
+</div>
+{% endfor %}
 
 <h2>Actividad MCP reciente (últimas 24 h)</h2>
 <div class="card">

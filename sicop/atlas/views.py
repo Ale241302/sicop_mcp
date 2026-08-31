@@ -173,6 +173,8 @@ def mcp_docs(request):
     from django.core.cache import cache
     from sicop.mcp_server import mcp
 
+    from sicop.atlas.tool_docs import CATEGORIAS as DOC_CAT, DOCS as TOOL_DOCS
+
     tools = []
     for t in mcp._tool_manager.list_tools():
         props = (t.parameters or {}).get("properties", {})
@@ -180,7 +182,20 @@ def mcp_docs(request):
         params = ", ".join(
             f"{k}{'*' if k in required else ''}" for k in props.keys()
         )
-        tools.append({"name": t.name, "desc": t.description or "", "params": params})
+        tools.append({"name": t.name, "desc": t.description or "", "params": params,
+                      "doc": TOOL_DOCS.get(t.name)})
+
+    by_name = {t["name"]: t for t in tools}
+    grouped = []
+    for cat, names in DOC_CAT:
+        items = [by_name[n] for n in names if n in by_name]
+        if items:
+            grouped.append({"categoria": cat, "tools": items})
+    # tools sin documentar (por si agregan una nueva) van al final
+    documentados = {n for _, ns in DOC_CAT for n in ns}
+    sueltos = [t for t in tools if t["name"] not in documentados]
+    if sueltos:
+        grouped.append({"categoria": "Otras", "tools": sueltos})
 
     clave = "sicop:mcp:bench:v1"
     try:
@@ -227,6 +242,7 @@ def mcp_docs(request):
         "tools": tools, "bench": bench, "ejemplos": ejemplos_uso,
         "total_tools": len(tools), "titulo": "Documentación MCP",
         "actividad": _actividad_mcp(),
+        "grupos": grouped,
     })
 
 
