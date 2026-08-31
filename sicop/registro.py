@@ -25,46 +25,10 @@ def registrar(herramienta, parametros=None, agente=None, build_id=None, conteo=N
 
 
 def _enriquecer_con_labels(text):
-    """Agrega labels humanos a las respuestas: NRO_SICOP -> NRO_PROCEDIMIENTO +
-    INSTITUCION + PROCEDIMIENTO_LABEL, y CEDULA_PROVEEDOR -> NOMBRE_PROVEEDOR.
-    Se aplica a TODAS las respuestas del MCP (chokepoint _logged) para que el
-    chat de la IA no muestre codigos crudos de la base."""
-    import json as _json
-
-    try:
-        data = _json.loads(text)
-    except Exception:  # noqa: BLE001
-        return text
-    rows = []
-
-    def _walk(obj):
-        if isinstance(obj, dict):
-            if obj.get("NRO_SICOP") or obj.get("CEDULA_PROVEEDOR"):
-                rows.append(obj)
-            for v in obj.values():
-                _walk(v)
-        elif isinstance(obj, list):
-            for it in obj:
-                _walk(it)
-
-    _walk(data)
-    if not rows:
-        return text
-    from .queries import resolver_procedimientos, resolver_proveedores
-
-    nros = list({str(r["NRO_SICOP"]) for r in rows if r.get("NRO_SICOP")})
-    ceds = list({str(r["CEDULA_PROVEEDOR"]) for r in rows if r.get("CEDULA_PROVEEDOR")})
-    labs = resolver_procedimientos(nros)
-    names = resolver_proveedores(ceds)
-    for r in rows:
-        n = str(r.get("NRO_SICOP")) if r.get("NRO_SICOP") else None
-        if n and n in labs:
-            for k, v in labs[n].items():
-                r.setdefault(k, v)
-        c = str(r.get("CEDULA_PROVEEDOR")) if r.get("CEDULA_PROVEEDOR") else None
-        if c and c in names:
-            r.setdefault("NOMBRE_PROVEEDOR", names[c])
-    return _json.dumps(data, ensure_ascii=False)
+    """(deprecado) El enriquecimiento vive en mcp_server.wrap (aplica a TODAS las
+    tools antes de serializar). Este camino de mutacion de result.content no
+    propaga en FastMCP 2.x; se mantiene como no-op por compatibilidad."""
+    return text
 
 
 def _etiquetar_laboratorio(result, name):
@@ -125,13 +89,6 @@ def wrap_mcp_call_tool(mcp):
                     pass
                 if carril == "laboratorio" and name not in ("sicop_lab_sql",):
                     result = _etiquetar_laboratorio(result, name)
-                # labels humanos (NRO_PROCEDIMIENTO / institucion / proveedor)
-                try:
-                    txt = getattr(result, "content", None)
-                    if txt and txt[0].text:
-                        txt[0].text = _enriquecer_con_labels(txt[0].text)
-                except Exception:  # noqa: BLE001
-                    pass
                 return result
             except Exception as e:  # noqa: BLE001
                 status = f"ERROR: {type(e).__name__}"

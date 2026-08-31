@@ -24,7 +24,44 @@ def wrap(value):
 
     value = to_plain(value)
     if isinstance(value, list):
-        return {"resultados": value, "total": len(value)}
+        value = {"resultados": value, "total": len(value)}
+    _etiquetar_labels(value)
+    return value
+
+
+def _etiquetar_labels(value):
+    """Inyecta labels humanos a las filas con NRO_SICOP / CEDULA_PROVEEDOR:
+    NRO_PROCEDIMIENTO, TIPO_PROCEDIMIENTO, INSTITUCION, PROCEDIMIENTO_LABEL y
+    NOMBRE_PROVEEDOR. Aplica a TODAS las respuestas (chokepoint wrap)."""
+    rows = []
+
+    def _walk(obj):
+        if isinstance(obj, dict):
+            if obj.get("NRO_SICOP") or obj.get("CEDULA_PROVEEDOR"):
+                rows.append(obj)
+            for v in obj.values():
+                _walk(v)
+        elif isinstance(obj, list):
+            for it in obj:
+                _walk(it)
+
+    _walk(value)
+    if not rows:
+        return value
+    from .queries import resolver_procedimientos, resolver_proveedores
+
+    nros = list({str(r["NRO_SICOP"]) for r in rows if r.get("NRO_SICOP")})
+    ceds = list({str(r["CEDULA_PROVEEDOR"]) for r in rows if r.get("CEDULA_PROVEEDOR")})
+    labs = resolver_procedimientos(nros)
+    names = resolver_proveedores(ceds)
+    for r in rows:
+        n = str(r.get("NRO_SICOP")) if r.get("NRO_SICOP") else None
+        if n and n in labs:
+            for k, v in labs[n].items():
+                r.setdefault(k, v)
+        c = str(r.get("CEDULA_PROVEEDOR")) if r.get("CEDULA_PROVEEDOR") else None
+        if c and c in names:
+            r.setdefault("NOMBRE_PROVEEDOR", names[c])
     return value
 
 
@@ -50,19 +87,19 @@ mcp = MCPServer(
 @mcp.tool()
 def sicop_ficha_proveedor(cedula: str) -> dict:
     """Ficha completa de un proveedor (por cedula, ej 3101029593): adjudicaciones por anio, cartera ejecucion vs captacion, desempeno de entrega y familias top."""
-    return queries.ficha_proveedor(cedula)
+    return wrap(queries.ficha_proveedor(cedula))
 
 
 @mcp.tool()
 def sicop_mercado_familia(familia_unspsc: str) -> dict:
     """Estructura de mercado de una familia UNSPSC (8 digitos, ej 461816 o 81112399): adjudicatarios top, productos del catalogo y desempeno."""
-    return queries.mercado_familia(familia_unspsc)
+    return wrap(queries.mercado_familia(familia_unspsc))
 
 
 @mcp.tool()
 def sicop_competencia_procedimiento(nro_sicop: str) -> dict:
     """Oferentes por linea de un procedimiento (nro_sicop): quien oferto, a que precio, quien gano y el delta contra el ganador."""
-    return queries.competencia_procedimiento(nro_sicop)
+    return wrap(queries.competencia_procedimiento(nro_sicop))
 
 
 @mcp.tool()
@@ -74,7 +111,7 @@ def sicop_producto(codigo_cl: str) -> list:
 @mcp.tool()
 def sicop_expediente(nro_sicop: str) -> dict:
     """Trazabilidad de un procedimiento (nro_sicop): que tramos tiene completos (cartel, ofertas, acto firme, adjudicado, contrato, garantia, recibido)."""
-    return queries.expediente(nro_sicop)
+    return wrap(queries.expediente(nro_sicop))
 
 
 @mcp.tool()
@@ -122,25 +159,25 @@ def sicop_precios_institucion(familia_unspsc: str = "", marca: str = "", anio: s
 @mcp.tool()
 def sicop_resumen() -> dict:
     """Estado de la base: tablas cargadas y filas (diagnostico)."""
-    return queries.resumen()
+    return wrap(queries.resumen())
 
 
 @mcp.tool()
 def sicop_cara_a_cara(cedula_a: str, cedula_b: str, familia_unspsc: str = "") -> dict:
     """Cara a cara de dos proveedores (plan: cara_a_cara): lineas donde ambos ofertaron, victorias, veces mas barato cada uno, familias compartidas y perfiles captacion/ejecucion."""
-    return queries.cara_a_cara(cedula_a, cedula_b, familia_unspsc or None)
+    return wrap(queries.cara_a_cara(cedula_a, cedula_b, familia_unspsc or None))
 
 
 @mcp.tool()
 def sicop_producto_historia(codigo_cl: str) -> dict:
     """Historia de un producto (CODIGO_PRODUCTO_CL de 16 digitos): catalogo, secuencia de precios ofertados por anio (mediana/min/max), adjudicaciones, proveedores top y quien paga de mas por institucion."""
-    return queries.producto_historia(codigo_cl)
+    return wrap(queries.producto_historia(codigo_cl))
 
 
 @mcp.tool()
 def sicop_campo_buscar(termino: str, limit: int = 20) -> dict:
     """Busqueda por termino en el catalogo de productos (descripcion/marca/modelo), proveedores e instituciones (plan: campo_buscar)."""
-    return queries.campo_buscar(termino, limit)
+    return wrap(queries.campo_buscar(termino, limit))
 
 
 @mcp.tool()
@@ -161,55 +198,55 @@ def sicop_buscar_procedimiento(numero_procedimiento: str, limit: int = 20) -> di
 @mcp.tool()
 def sicop_perdidas_baratas(cedula: str = "", familia_unspsc: str = "", limit: int = 200) -> dict:
     """Lineas donde un proveedor oferto MAS BARATO que el ganador y aun asi perdio (cola de revision, no conclusion)."""
-    return queries.perdidas_baratas(cedula, familia_unspsc or None, limit)
+    return wrap(queries.perdidas_baratas(cedula, familia_unspsc or None, limit))
 
 
 @mcp.tool()
 def sicop_regimen_evaluacion(nro_sicop: str) -> dict:
     """Regimen de evaluacion de un procedimiento (factores y pesos de evaluacion_ofertas)."""
-    return queries.regimen_evaluacion(nro_sicop)
+    return wrap(queries.regimen_evaluacion(nro_sicop))
 
 
 @mcp.tool()
 def sicop_invitaciones_procedimiento(nro_sicop: str, limit: int = 500) -> dict:
     """Quien fue invitado a un procedimiento (contratacion directa). Direccionamiento ex-ante."""
-    return queries.invitaciones_procedimiento(nro_sicop, limit)
+    return wrap(queries.invitaciones_procedimiento(nro_sicop, limit))
 
 
 @mcp.tool()
 def sicop_invitaciones_proveedor(cedula: str, limit: int = 200) -> dict:
     """Procedimientos donde un proveedor fue invitado (plan: invitaciones_pendientes)."""
-    return queries.invitaciones_proveedor(cedula, limit)
+    return wrap(queries.invitaciones_proveedor(cedula, limit))
 
 
 @mcp.tool()
 def sicop_invitados_vs_ofertantes(nro_sicop: str) -> dict:
     """Cuantos invitados vs cuantos ofertaron en un procedimiento (tasa de respuesta)."""
-    return queries.invitados_vs_ofertantes(nro_sicop)
+    return wrap(queries.invitados_vs_ofertantes(nro_sicop))
 
 
 @mcp.tool()
 def sicop_lineas_procedimiento(nro_sicop: str) -> dict:
     """Cadena de linea completa: cartel (pidio), ofertadas, adjudicadas, contratadas, recibidas."""
-    return queries.lineas_procedimiento(nro_sicop)
+    return wrap(queries.lineas_procedimiento(nro_sicop))
 
 
 @mcp.tool()
 def sicop_proveedor_dim(cedula: str) -> dict:
     """Registro del proveedor: tipo, tamano, zona, fechas de constitucion/expira."""
-    return queries.proveedor_dim(cedula)
+    return wrap(queries.proveedor_dim(cedula))
 
 
 @mcp.tool()
 def sicop_ordenes_proveedor(cedula: str, anio: str = "", limit: int = 1000) -> dict:
     """Ordenes de pedido de un proveedor (nivel EJECUCION, solo CRC sumable)."""
-    return queries.ordenes_proveedor(cedula, anio or None, limit)
+    return wrap(queries.ordenes_proveedor(cedula, anio or None, limit))
 
 
 @mcp.tool()
 def sicop_recursos_procedimiento(nro_sicop: str) -> dict:
     """Recursos de objecion de un procedimiento con su desenlace."""
-    return queries.recursos_procedimiento(nro_sicop)
+    return wrap(queries.recursos_procedimiento(nro_sicop))
 
 
 @mcp.tool()
