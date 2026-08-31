@@ -625,7 +625,8 @@ def expediente_trazabilidad():
     }
     universe = set()
     for s in sets.values():
-        universe |= s
+        # descartar NRO_SICOP nulos/vacios
+        universe |= {x for x in s if x}
     cartel_meta = {}
     for r in SicopCarteles.objects.values("NRO_SICOP", "NRO_PROCEDIMIENTO", "CEDULA_INSTITUCION").iterator():
         cartel_meta.setdefault(r["NRO_SICOP"], r)
