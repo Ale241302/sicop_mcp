@@ -416,7 +416,7 @@ def sicop_fact_oferta(nro_sicop: str = "", cedula: str = "", limit: int = 500) -
                 d["PU_OFERTADO_CRC"] = round(float(d["PU_OFERTADO_ORIG"]) * float(d["TC_OFERTA"]), 4)
                 d["CRC_CONVERTIDO_EN_RESPUESTA"] = True
         out.append(d)
-    return {"resultados": out, "total": len(out)}
+    return wrap(out)
 
 
 @mcp.tool()
@@ -454,7 +454,7 @@ def sicop_fact_contrato(nro_contrato: str = "", nro_sicop: str = "", limit: int 
                 d["PU_CONTRATADO_CRC"] = round(float(d["PU_CONTRATADO_ORIG"]) * float(d["TC_CONTRATO"]), 4)
                 d["CRC_CONVERTIDO_EN_RESPUESTA"] = True
         out.append(d)
-    return {"resultados": out, "total": len(out)}
+    return wrap(out)
 
 
 @mcp.tool()
@@ -483,7 +483,7 @@ def sicop_fact_orden(nro_orden: str = "", cedula: str = "", anio: str = "", nro_
         if nro_sicop:
             d["NRO_SICOP"] = nro_sicop
         out.append(d)
-    return {"resultados": out, "total": len(out)}
+    return wrap(out)
 
 
 @mcp.tool()
