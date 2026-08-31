@@ -331,6 +331,24 @@ def sicop_catalogo_campo(tabla: str = "", campo: str = "", limit: int = 500) -> 
 
 
 @mcp.tool()
+def sicop_mes_publicacion(mes: str = "", nro_sicop: str = "", desfasados: bool = False, limit: int = 100) -> dict:
+    """Mes de publicacion REAL por procedimiento (derivado de FECHA_PUBLICACION del cartel).
+    MES_PUBLICACION de las tablas crudas es el primer zip donde el extractor vio la fila (trampa:
+    ~21% desfasados). Con mes='YYYYMM' devuelve los procedimientos publicados ESE mes (serie temporal
+    correcta); con nro_sicop devuelve el caso; con desfasados=True lista los que no coinciden."""
+    from sicop.models import GoldMesPublicacion as M
+
+    qs = M.objects.all()
+    if nro_sicop:
+        qs = qs.filter(NRO_SICOP=nro_sicop)
+    if mes:
+        qs = qs.filter(MES_REAL=mes)
+    if desfasados:
+        qs = qs.filter(DESFASADO="S")
+    return wrap(list(qs.order_by("NRO_SICOP")[:limit]))
+
+
+@mcp.tool()
 def sicop_fact_requerimiento(nro_sicop: str = "", limit: int = 500) -> dict:
     """Hecho de requerimiento (cartel): lo que se pidio por linea (grano procedimiento x linea x partida)."""
     from sicop.models import FactRequerimiento as M

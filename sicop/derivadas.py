@@ -651,6 +651,49 @@ def expediente_trazabilidad():
     print(f"expediente_trazabilidad: {GoldExpedienteTrazabilidad.objects.count()} procedimientos trazados (corpus completo)", flush=True)
 
 
+def mes_publicacion_real():
+    """Mes de publicacion REAL por procedimiento (corrige la trampa de
+    MES_PUBLICACION: el extractor sella la fila con el PRIMER zip donde la vio,
+    no con el mes real del cartel). Deriva el mes desde FECHA_PUBLICACION del
+    cartel. ~21% de los procedimientos estaban desfasados. Se usa para series
+    temporales correctas SIN re-extraer.
+    """
+    from .models import GoldMesPublicacion, SicopCarteles, SicopLineasCartel
+
+    GoldMesPublicacion.objects.all().delete()
+    # mes real por procedimiento (desde cartel)
+    real = {}
+    for r in SicopCarteles.objects.values("NRO_SICOP", "NRO_PROCEDIMIENTO",
+                                          "CEDULA_INSTITUCION", "FECHA_PUBLICACION").iterator():
+        if r["NRO_SICOP"]:
+            real.setdefault(r["NRO_SICOP"], r)
+    # primera vista (lo que guarda MES_PUBLICACION) por procedimiento
+    primera = {}
+    for nro, mes in SicopLineasCartel.objects.values_list("NRO_SICOP", "MES_PUBLICACION").iterator():
+        if nro and nro not in primera:
+            primera[nro] = mes
+
+    batch = []
+    todos = set(real) | set(primera)
+    for nro in sorted(todos):
+        r = real.get(nro) or {}
+        fec = r.get("FECHA_PUBLICACION")
+        mes_real = f"{fec.year:04d}{fec.month:02d}" if fec else None
+        mes_prim = primera.get(nro)
+        obj = GoldMesPublicacion(
+            NRO_SICOP=nro, NUMERO_PROCEDIMIENTO=r.get("NRO_PROCEDIMIENTO"),
+            CEDULA_INSTITUCION=r.get("CEDULA_INSTITUCION"), FECHA_PUBLICACION=fec,
+            MES_REAL=mes_real, MES_PRIMERA_VISTA=mes_prim,
+            DESFASADO="S" if (mes_real and mes_prim and mes_real != mes_prim) else "N",
+        )
+        batch.append(obj)
+        if len(batch) >= BATCH:
+            _flush(GoldMesPublicacion, batch)
+    _flush(GoldMesPublicacion, batch)
+    n_desf = GoldMesPublicacion.objects.filter(DESFASADO="S").count()
+    print(f"mes_publicacion_real: {GoldMesPublicacion.objects.count()} procedimientos; {n_desf} desfasados (MES_PUBLICACION != mes real)", flush=True)
+
+
 ALL = {
     'producto_firma': producto_firma,
     'recursos_desenlace': recursos_desenlace,
@@ -661,5 +704,6 @@ ALL = {
     'ctl_deriva': ctl_deriva,
     'catalogo_campo': catalogo_campo,
     'expediente_trazabilidad': expediente_trazabilidad,
+    'mes_publicacion_real': mes_publicacion_real,
 }
 

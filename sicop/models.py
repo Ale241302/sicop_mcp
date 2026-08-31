@@ -506,6 +506,28 @@ class GoldExpedienteTrazabilidad(models.Model):
         verbose_name = 'expediente_trazabilidad'
 
 
+class GoldMesPublicacion(models.Model):
+    """gold_mes_publicacion - mes de publicacion REAL por procedimiento.
+
+    MES_PUBLICACION de las tablas crudas es el mes del PRIMER zip donde el
+    extractor vio la fila (dedup), NO el mes de publicacion real del
+    procedimiento. Esta tabla deriva el mes real desde FECHA_PUBLICACION del
+    cartel para que las series temporales midan lo que dicen medir.
+    """
+    NRO_SICOP = models.TextField(blank=True, null=True)
+    NUMERO_PROCEDIMIENTO = models.TextField(blank=True, null=True)
+    CEDULA_INSTITUCION = models.TextField(blank=True, null=True)
+    FECHA_PUBLICACION = models.DateField(null=True, blank=True)
+    MES_REAL = models.TextField(blank=True, null=True)
+    MES_PRIMERA_VISTA = models.TextField(blank=True, null=True)
+    DESFASADO = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'gold_mes_publicacion'
+        verbose_name = 'mes_publicacion_real'
+        indexes = [models.Index(fields=['MES_REAL'])]
+
+
 class GoldInvitacionesConcentracion(models.Model):
     """invitaciones_concentracion - tabla derivada."""
     CEDULA_INSTITUCION = models.TextField(blank=True, null=True)
