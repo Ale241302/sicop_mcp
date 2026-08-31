@@ -54,8 +54,10 @@ def _crc(monto, moneda, tc):
         try:
             r = float(monto) * float(tc)
             # campo DECIMAL(18,4): max ~9.99e13. Valores mayores son precios
-            # contaminados de la fuente (no representables) -> null (no crashear)
-            if abs(r) >= 10**14:
+            # contaminados de la fuente (no representables) -> null (no crashear).
+            # Umbral 9e13 (no 1e14): el redondeo a 4 decimales de 9.999...e13
+            # desborda igual. Los montos legitimos quedan muy por debajo.
+            if abs(r) >= 9 * 10**13:
                 return None
             return r
         except (TypeError, ValueError):
