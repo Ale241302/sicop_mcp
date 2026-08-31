@@ -92,6 +92,20 @@ def resolver_proveedores(cedulas):
     return out
 
 
+def resolver_instituciones(cedulas):
+    """Mapa CEDULA_INSTITUCION -> NOMBRE_INSTITUCION (label humano)."""
+    from .models import SicopInstituciones
+
+    cedulas = [str(c) for c in cedulas if c]
+    if not cedulas:
+        return {}
+    out = {}
+    for r in (SicopInstituciones.objects.filter(CEDULA__in=cedulas)
+              .values("CEDULA", "NOMBRE_INSTITUCION")):
+        out.setdefault(r["CEDULA"], r["NOMBRE_INSTITUCION"])
+    return out
+
+
 def resumen():
     """Conteos por tabla, cacheados ~6h (los datos solo cambian en el ciclo
     diario 06:00/18:00). Evita contar 55 tablas (incl. 42M filas) por request."""

@@ -30,14 +30,16 @@ def wrap(value):
 
 
 def _etiquetar_labels(value):
-    """Inyecta labels humanos a las filas con NRO_SICOP / CEDULA_PROVEEDOR:
-    NRO_PROCEDIMIENTO, TIPO_PROCEDIMIENTO, INSTITUCION, PROCEDIMIENTO_LABEL y
-    NOMBRE_PROVEEDOR. Aplica a TODAS las respuestas (chokepoint wrap)."""
+    """Reemplaza las claves crudas por labels humanos. NRO_SICOP -> NRO_PROCEDIMIENTO +
+    INSTITUCION + PROCEDIMIENTO_LABEL, CEDULA_PROVEEDOR -> NOMBRE_PROVEEDOR,
+    CEDULA_INSTITUCION -> INSTITUCION. La clave cruda se mueve a `_claves` (nested,
+    para uso programatico) y NO aparece como columna visible: el label es lo que
+    ve el usuario. Si no se puede resolver, la clave cruda se conserva."""
     rows = []
 
     def _walk(obj):
         if isinstance(obj, dict):
-            if obj.get("NRO_SICOP") or obj.get("CEDULA_PROVEEDOR"):
+            if any(k in obj for k in ("NRO_SICOP", "CEDULA_PROVEEDOR", "CEDULA_INSTITUCION")):
                 rows.append(obj)
             for v in obj.values():
                 _walk(v)
@@ -48,20 +50,34 @@ def _etiquetar_labels(value):
     _walk(value)
     if not rows:
         return value
-    from .queries import resolver_procedimientos, resolver_proveedores
+    from .queries import resolver_instituciones, resolver_procedimientos, resolver_proveedores
 
     nros = list({str(r["NRO_SICOP"]) for r in rows if r.get("NRO_SICOP")})
     ceds = list({str(r["CEDULA_PROVEEDOR"]) for r in rows if r.get("CEDULA_PROVEEDOR")})
+    insts = list({str(r["CEDULA_INSTITUCION"]) for r in rows if r.get("CEDULA_INSTITUCION")})
     labs = resolver_procedimientos(nros)
     names = resolver_proveedores(ceds)
+    names_inst = resolver_instituciones(insts)
     for r in rows:
-        n = str(r.get("NRO_SICOP")) if r.get("NRO_SICOP") else None
-        if n and n in labs:
-            for k, v in labs[n].items():
-                r.setdefault(k, v)
-        c = str(r.get("CEDULA_PROVEEDOR")) if r.get("CEDULA_PROVEEDOR") else None
-        if c and c in names:
-            r.setdefault("NOMBRE_PROVEEDOR", names[c])
+        if "NRO_SICOP" in r:
+            n = str(r["NRO_SICOP"])
+            if n in labs:
+                r.setdefault("_claves", {})["NRO_SICOP"] = n
+                del r["NRO_SICOP"]
+                for k, v in labs[n].items():
+                    r.setdefault(k, v)
+        if "CEDULA_PROVEEDOR" in r:
+            c = str(r["CEDULA_PROVEEDOR"])
+            if c in names:
+                r.setdefault("_claves", {})["CEDULA_PROVEEDOR"] = c
+                del r["CEDULA_PROVEEDOR"]
+                r.setdefault("NOMBRE_PROVEEDOR", names[c])
+        if "CEDULA_INSTITUCION" in r and "INSTITUCION" not in r:
+            ci = str(r["CEDULA_INSTITUCION"])
+            if ci in names_inst:
+                r.setdefault("_claves", {})["CEDULA_INSTITUCION"] = ci
+                del r["CEDULA_INSTITUCION"]
+                r.setdefault("INSTITUCION", names_inst[ci])
     return value
 
 
