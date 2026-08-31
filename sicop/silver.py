@@ -52,7 +52,12 @@ def _crc(monto, moneda, tc):
         return monto
     if tc:
         try:
-            return float(monto) * float(tc)
+            r = float(monto) * float(tc)
+            # campo DECIMAL(18,4): max ~9.99e13. Valores mayores son precios
+            # contaminados de la fuente (no representables) -> null (no crashear)
+            if abs(r) >= 10**14:
+                return None
+            return r
         except (TypeError, ValueError):
             return None
     return None
