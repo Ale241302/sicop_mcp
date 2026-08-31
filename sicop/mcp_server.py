@@ -539,20 +539,27 @@ def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
 
     from concurrent.futures import ThreadPoolExecutor
 
+    # Quirks de publicacion VERIFICADOS por re-extraccion (2026-08): la fuente
+    # publico el mes pero NO taguea lineas_cartel bajo ese aaaamm (los datos de
+    # esos procedimientos estan bajo otros meses de publicacion). Re-extraer no
+    # agrega nada: NO son huecos reparables y NO hay que re-disparar reparaciones.
+    QUIRKS_VERIFICADOS = {"202005", "202008", "202108"}
+
     def _check(m):
         # I/O-bound (HTTP HEAD a la fuente) -> paralelo; ~10 concurrentes
         h = vigilancia._head(str(m))
         existe = h.get("status") == 200 and not h.get("error")
         return (m, existe, lc_por_mes.get(str(m), 0))
 
-    huecos = []
+    huecos, quirks = [], []
     with ThreadPoolExecutor(max_workers=10) as ex:
         for m, existe_fuente, n_lc in ex.map(_check, meses):
             if not existe_fuente:
                 continue
             if n_lc == 0:
-                huecos.append({"aaaamm": str(m), "lineas_cartel": n_lc,
-                               "fuente": "zip publicado, base vacia (sin lineas_cartel)"})
+                item = {"aaaamm": str(m), "lineas_cartel": n_lc,
+                        "fuente": "zip publicado, base vacia (sin lineas_cartel)"}
+                (quirks if str(m) in QUIRKS_VERIFICADOS else huecos).append(item)
 
     reparados = []
     if not solo_reporte and huecos:
@@ -561,7 +568,8 @@ def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
             t.delay(g["aaaamm"])
             reparados.append(g["aaaamm"])
     return {"total_meses": len(meses), "huecos": huecos, "reparados_encolados": reparados,
-            "nota": "hueco real = la fuente publico el mes pero nuestra base no tiene NINGUNA linea del cartel (senal de presencia confiable)"}
+            "quirks_verificados": quirks,
+            "nota": "hueco real = la fuente publico el mes pero nuestra base no tiene NINGUNA linea del cartel (senal de presencia confiable). quirks_verificados: la fuente publico el mes pero NO taguea lineas_cartel bajo el (verificado por re-extraccion); NO re-extraer."}
 
 
 @mcp.tool()
