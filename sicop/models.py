@@ -526,7 +526,7 @@ class GoldMesPublicacion(models.Model):
     class Meta:
         db_table = 'gold_mes_publicacion'
         verbose_name = 'mes_publicacion_real'
-        indexes = [models.Index(fields=['MES_REAL'])]
+        indexes = [models.Index(fields=['MES_REAL'], name='gold_mes_pub_mes_re_b4f5d0_idx')]
 
 
 class GoldInvitacionesConcentracion(models.Model):
