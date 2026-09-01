@@ -13,7 +13,7 @@
 
 <div class="card">
 <table>
-<tr><th class="r">#</th><th>Proveedor</th><th class="r">Monto CRC</th><th class="r">Líneas</th><th></th></tr>
+<tr><th class="r">#</th><th>Proveedor</th><th class="r">Monto CRC</th><th class="r">Líneas</th></tr>
 {% for p in top %}
 <tr>
 <td class="r"><span class="badge {% if forloop.counter <= 3 %}w{% else %}g{% endif %}">{{ forloop.counter }}</span></td>
@@ -27,9 +27,6 @@
 </td>
 <td class="r"><b>₡{{ p.m|floatformat:0 }}</b></td>
 <td class="r">{{ p.n }}</td>
-<td style="width:22%">
-  {% if p.m is not None and stats.max %}<span class="mini-bar"><span style="width:{{ p.pct }}%;height:100%;display:block;background:linear-gradient(90deg,#0E8C7A,#18A98F)"></span></span>{% endif %}
-</td>
 </tr>
 {% endfor %}
 </table>
