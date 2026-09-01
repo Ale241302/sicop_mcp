@@ -22,6 +22,14 @@ def _fmt(n):
         return str(n)
 
 
+def _fmtn(n):
+    """Formatea un entero con separador de miles (punto)."""
+    try:
+        return f"{int(n):,}".replace(",", ".")
+    except (TypeError, ValueError):
+        return "—"
+
+
 def index(request):
     from django.core.cache import cache
 
@@ -45,12 +53,23 @@ def index(request):
         except Exception:  # noqa: BLE001
             pass
 
+    tests = list(CtlTest.objects.order_by("-id")[:8])
+    corridas = list(CtlCorrida.objects.order_by("-INICIADO_EN")[:6])
+    senales = list(Senal.objects.order_by("-fecha")[:8])
+    fails = sum(1 for t in tests if t.RESULTADO == "FAIL")
+    ultima_estado = corridas[0].ESTADO if corridas else None
+    sano = fails == 0 and ultima_estado in ("PUBLICADO", "OK")
+
     ctx = {
         "titulo": "Atlas SICOP",
-        "resumen": resumen,
-        "tests": list(CtlTest.objects.order_by("-id")[:8]),
-        "corridas": list(CtlCorrida.objects.order_by("-INICIADO_EN")[:6]),
-        "senales": list(Senal.objects.order_by("-fecha")[:8]),
+        "resumen": {k: _fmtn(v) for k, v in resumen.items()},
+        "sano": sano,
+        "fails": fails,
+        "ultima_estado": ultima_estado,
+        "ultima_corrida": corridas[0].CORRIDA_ID if corridas else "—",
+        "tests": tests,
+        "corridas": corridas,
+        "senales": senales,
         "deriva": list(CtlDeriva.objects.filter(LLENADO_PCT__lt=95).values("CONJUNTO", "CAMPO", "ANIO", "LLENADO_PCT").order_by("LLENADO_PCT")[:12]),
         "sobre": queries.sobre("mixto", queries.COBERTURA_CRUCE),
     }
@@ -138,14 +157,30 @@ def calidad(request):
     from sicop.models import (CtlDeriva, CtlTest, CtlCorrida, CatalogoCampo,
                               VigilanciaCheck, CorridaPaso)
 
+    tests = list(CtlTest.objects.order_by("-id")[:50])
+    corridas = list(CtlCorrida.objects.order_by("-INICIADO_EN")[:20])
+    pasos = list(CorridaPaso.objects.order_by("-id")[:60])
+    fails = sum(1 for t in tests if t.RESULTADO == "FAIL")
+    n_pass = len(tests) - fails
+    n_pub = sum(1 for c in corridas if c.ESTADO == "PUBLICADO")
+    n_bloq = sum(1 for c in corridas if c.ESTADO == "BLOQUEADO")
+    n_colg = sum(1 for c in corridas if c.ESTADO == "EN_CURSO")
+    if fails or n_bloq or n_colg:
+        veredicto, vcls = "Requiere atencion", "r"
+    else:
+        veredicto, vcls = "Saludable", "g"
+
     ctx = {
         "deriva": list(CtlDeriva.objects.order_by("CONJUNTO", "ANIO", "CAMPO")[:300]),
-        "tests": list(CtlTest.objects.order_by("-id")[:50]),
-        "corridas": list(CtlCorrida.objects.order_by("-INICIADO_EN")[:20]),
+        "tests": tests,
+        "corridas": corridas,
         "campos": list(CatalogoCampo.objects.exclude(TRAMPA__isnull=True)[:40]),
         "vigilancia": list(VigilanciaCheck.objects.order_by("-fecha")[:20]),
-        "pasos": list(CorridaPaso.objects.order_by("-id")[:60]),
+        "pasos": pasos,
         "bronze": _bronze_count(),
+        "veredicto": veredicto, "vcls": vcls,
+        "n_pass": n_pass, "n_fail": fails,
+        "n_pub": n_pub, "n_bloq": n_bloq, "n_colg": n_colg,
     }
     return render(request, "atlas/calidad.html", ctx)
 

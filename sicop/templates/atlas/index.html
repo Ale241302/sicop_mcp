@@ -2,51 +2,68 @@
 {% block title %}Atlas SICOP{% endblock %}
 {% block body %}
 <h1>Atlas SICOP <span class="badge g">canónico</span></h1>
-<p style="color:var(--mut)">Datos abiertos de contratación pública de Costa Rica · 2020–2026 · la app le pone cara al corpus y al harness.</p>
+<p style="color:var(--mut)">Datos abiertos de contratación pública de Costa Rica · 2020–2026.</p>
+
+{% if sano %}
+<div class="salud g"><b>Estado: al día</b> · última corrida <code>{{ ultima_corrida }}</code> · 0 tests fallidos · gold publicado</div>
+{% else %}
+<div class="salud r"><b>Estado: requiere atención</b> · {{ fails }} tests fallidos · última corrida <code>{{ ultima_corrida }}</code> ({{ ultima_estado }}) · <a href="/atlas/calidad/" style="color:var(--bad)">ver calidad</a></div>
+{% endif %}
 
 <h2>El corpus en una vista</h2>
 <div class="kpis">
-  <div class="kpi"><div class="n">{{ resumen.adjudicaciones|default:"—" }}</div><div class="l">Líneas adjudicadas</div></div>
-  <div class="kpi"><div class="n">{{ resumen.ofertas|default:"—" }}</div><div class="l">Ofertas</div></div>
-  <div class="kpi"><div class="n">{{ resumen.ordenes|default:"—" }}</div><div class="l">Órdenes de pedido</div></div>
-  <div class="kpi"><div class="n">{{ resumen.invitaciones|default:"—" }}</div><div class="l">Invitaciones</div></div>
+  <div class="kpi"><div class="n">{{ resumen.adjudicaciones }}</div><div class="l">Líneas adjudicadas</div><div class="l" style="text-transform:none;color:var(--mut)">captación</div></div>
+  <div class="kpi"><div class="n">{{ resumen.ofertas }}</div><div class="l">Ofertas presentadas</div><div class="l" style="text-transform:none;color:var(--mut)">líneas ofertadas</div></div>
+  <div class="kpi"><div class="n">{{ resumen.ordenes }}</div><div class="l">Órdenes de pedido</div><div class="l" style="text-transform:none;color:var(--mut)">ejecución</div></div>
+  <div class="kpi"><div class="n">{{ resumen.invitaciones }}</div><div class="l">Invitaciones</div><div class="l" style="text-transform:none;color:var(--mut)">direccionamiento</div></div>
 </div>
 <div class="sobre"><b>Sobre</b>
-  nivel_medicion: {{ sobre.nivel_medicion }} · cobertura_cruce: {{ sobre.cobertura_cruce }}
-  · moneda: {{ sobre.moneda }}<br>
-  {% for c in sobre.caveats %}<span class="wa">⚠</span> {{ c }}<br>{% endfor %}
+  nivel_medicion: {{ sobre.nivel_medicion }} · cobertura_cruce: {{ sobre.cobertura_cruce }} · moneda: {{ sobre.moneda }}
+  {% for c in sobre.caveats %}<br><span class="wa">⚠</span> {{ c }}{% endfor %}
 </div>
 
-<h2>Calidad del dato (entra primero)</h2>
-{% if tests %}
-<table><tr><th>Corrida</th><th>Test</th><th>Resultado</th><th>Valor</th></tr>
-{% for t in tests %}<tr><td>{{ t.CORRIDA_ID }}</td><td>{{ t.TEST }}</td>
-<td><span class="badge {% if t.RESULTADO == 'PASS' %}g{% else %}r{% endif %}">{{ t.RESULTADO }}</span></td>
-<td>{{ t.VALOR_OBTENIDO }}</td></tr>{% endfor %}
-</table>
-{% else %}<p class="bad">Sin tests ejecutados todavía — corré <code>python manage.py fase1 --solo-tests</code>.</p>{% endif %}
-
-<h2>Huecos declarados (campos que la fuente deja sin llenar en ciertos años)</h2>
-{% if deriva %}
+<h2>Estado del sistema</h2>
 <div class="card">
-<table><tr><th>Conjunto</th><th>Campo</th><th>Año</th><th>Llenado</th></tr>
-{% for d in deriva %}<tr><td>{{ d.CONJUNTO }}</td><td>{{ d.CAMPO }}</td><td>{{ d.ANIO }}</td>
-<td>{% if not d.LLENADO_PCT %}<span class="badge wa">hueco</span>{% else %}<span class="{% if d.LLENADO_PCT < 50 %}bad{% elif d.LLENADO_PCT < 95 %}wa{% else %}ok{% endif %}">{{ d.LLENADO_PCT|floatformat:1 }}%</span>{% endif %}</td></tr>{% endfor %}
+{% if corridas %}
+<table>
+<tr><th>Corrida</th><th>Estado</th><th>Alcance</th><th class="r">Inicio</th></tr>
+{% for c in corridas %}<tr><td style="max-width:260px;overflow:hidden;text-overflow:ellipsis">{{ c.CORRIDA_ID }}</td>
+<td><span class="badge {% if c.ESTADO == 'PUBLICADO' or c.ESTADO == 'OK' %}g{% elif c.ESTADO == 'BLOQUEADO' or c.ESTADO == 'FALLIDA' %}r{% else %}w{% endif %}">{{ c.ESTADO }}</span></td>
+<td>{{ c.ALCANCE }}</td><td class="r">{{ c.INICIADO_EN|date:"d/m H:i" }}</td></tr>{% endfor %}
 </table>
-</div>
-<p class="wa" style="font-size:13px"><b>hueco</b> = el campo existe en el esquema pero la fuente no lo publica ese año. Es una declaración, no un error: ninguna serie multianual se publica sin declarar sus huecos.</p>
+{% if tests %}
+<p style="font-size:13px;color:var(--mut)">Últimos tests: {% for t in tests %}<span class="badge {% if t.RESULTADO == 'PASS' %}g{% else %}r{% endif %}">{{ t.RESULTADO }}</span>{% endfor %} <a href="/atlas/calidad/">ver todos →</a></p>
 {% endif %}
+{% else %}<p class="bad">Sin corridas todavía.</p>{% endif %}
+</div>
 
-<h2>Señales del día (cara del harness)</h2>
+<h2>Huecos declarados (campos que la fuente no llena algunos años)</h2>
+<div class="card">
+{% if deriva %}
+<table><tr><th>Conjunto</th><th>Campo</th><th>Año</th><th class="r">Llenado</th></tr>
+{% for d in deriva %}<tr><td>{{ d.CONJUNTO }}</td><td>{{ d.CAMPO }}</td><td>{{ d.ANIO }}</td>
+<td class="r">{% if not d.LLENADO_PCT %}<span class="badge wa">hueco</span>{% else %}<span class="{% if d.LLENADO_PCT < 50 %}bad{% elif d.LLENADO_PCT < 95 %}wa{% else %}ok{% endif %}">{{ d.LLENADO_PCT|floatformat:1 }}%</span>{% endif %}</td></tr>{% endfor %}
+</table>
+<p class="wa" style="font-size:13px"><b>hueco</b> = el campo existe en el esquema pero la fuente no lo publica ese año. Es una declaración, no un error.</p>
+{% else %}<p>Sin campos por debajo del 95%.</p>{% endif %}
+</div>
+
+<h2>Señales del día</h2>
+<div class="card">
 {% if senales %}
 <table><tr><th>Fecha</th><th>Tipo</th><th>Prioridad</th><th>Procedimiento</th></tr>
 {% for s in senales %}<tr><td>{{ s.fecha|date:"d/m H:i" }}</td><td>{{ s.tipo }}</td>
 <td><span class="badge {% if s.prioridad == 'alta' %}r{% else %}w{% endif %}">{{ s.prioridad }}</span></td>
-<td><a href="/atlas/procedimiento/{{ s.nro_sicop }}/">{{ s.nro_sicop }}</a></td></tr>{% endfor %}
+<td>{% if s.nro_sicop %}<a href="/atlas/procedimiento/{{ s.nro_sicop }}/">{{ s.nro_sicop }}</a>{% else %}—{% endif %}</td></tr>{% endfor %}
 </table>
 {% else %}<p>Sin señales recientes.</p>{% endif %}
+</div>
 
 <h2>Navegar</h2>
-<p>Buscar arriba, o ir a <a href="/atlas/proveedores/">proveedores</a> por monto adjudicado, o a un
-<a href="/atlas/procedimiento/20260402609/">procedimiento de ejemplo</a>.</p>
+<div class="kpis">
+  <div class="kpi"><a href="/atlas/proveedores/"><b>Proveedores</b></a><div class="l">ranking por monto adjudicado</div></div>
+  <div class="kpi"><a href="/atlas/calidad/"><b>Calidad</b></a><div class="l">tests, corridas, huecos, trampas</div></div>
+  <div class="kpi"><a href="/atlas/mcp/"><b>MCP</b></a><div class="l">guía de las 62 tools</div></div>
+  <div class="kpi"><a href="/atlas/buscar/?q=UPS"><b>Buscar</b></a><div class="l">productos, proveedores</div></div>
+</div>
 {% endblock %}

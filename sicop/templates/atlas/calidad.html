@@ -1,42 +1,77 @@
 {% extends "atlas/base.html" %}
 {% block title %}Calidad del dato{% endblock %}
 {% block body %}
-<h1>Calidad del dato <span class="badge g">primero</span></h1>
-<p>Regla del proyecto: <b>toda afirmación sobre el dato va con el comando que la produjo.</b> Acá: llenado por campo y año, tests-gate, corridas, vigilancia y el diccionario con trampas.</p>
+<h1>Calidad del dato <span class="badge {{ vcls }}">{{ veredicto }}</span></h1>
+<p>Acá se ve si el corpus está sano: tests-gate, corridas del pipeline, vigilancia de la fuente, huecos declarados y el diccionario de trampas.</p>
 
-<h2>Bronze inmutable</h2>
-<div class="kpi"><div class="n">{{ bronze }}</div><div class="l">Filas en bronze (crudo + hash + corrida)</div></div>
+<div class="kpis">
+  <div class="kpi"><div class="n">{{ bronze }}</div><div class="l">Filas en bronze (crudo)</div></div>
+  <div class="kpi"><div class="n ok">{{ n_pass }}</div><div class="l">tests PASS</div></div>
+  <div class="kpi"><div class="n {% if n_fail %}bad{% else %}ok{% endif %}">{{ n_fail }}</div><div class="l">tests FAIL</div></div>
+  <div class="kpi"><div class="n ok">{{ n_pub }}</div><div class="l">corridas publicadas</div></div>
+  <div class="kpi"><div class="n {% if n_bloq or n_colg %}bad{% else %}ok{% endif %}">{{ n_bloq }}</div><div class="l">bloqueadas</div></div>
+  <div class="kpi"><div class="n">{{ campos|length }}</div><div class="l">trampas documentadas</div></div>
+</div>
+
+<h2>Tests como gate <span class="sobre" style="margin-left:8px">cada corrida publica solo si los 8 pasan</span></h2>
+<div class="card">
+{% if tests %}
+<table><tr><th>Corrida</th><th>Test</th><th>Resultado</th><th>Valor</th></tr>
+{% for t in tests %}<tr><td style="max-width:230px;overflow:hidden;text-overflow:ellipsis">{{ t.CORRIDA_ID }}</td><td>{{ t.TEST }}</td>
+<td><span class="badge {% if t.RESULTADO == 'PASS' %}g{% else %}r{% endif %}">{{ t.RESULTADO }}</span></td><td>{{ t.VALOR_OBTENIDO }}</td></tr>{% endfor %}
+</table>
+{% else %}<p>Sin tests registrados.</p>{% endif %}
+</div>
+
+<h2>Corridas del pipeline</h2>
+<div class="card">
+{% if corridas %}
+<table><tr><th>Corrida</th><th>Estado</th><th>Alcance</th><th class="r">Inicio</th></tr>
+{% for c in corridas %}<tr><td style="max-width:230px;overflow:hidden;text-overflow:ellipsis">{{ c.CORRIDA_ID }}</td>
+<td><span class="badge {% if c.ESTADO == 'PUBLICADO' or c.ESTADO == 'OK' %}g{% elif c.ESTADO == 'BLOQUEADO' or c.ESTADO == 'FALLIDA' %}r{% else %}w{% endif %}">{{ c.ESTADO }}</span></td>
+<td>{{ c.ALCANCE }}</td><td class="r">{{ c.INICIADO_EN|date:"d/m H:i" }}</td></tr>{% endfor %}
+</table>
+{% else %}<p>Sin corridas.</p>{% endif %}
+</div>
+
+<h2>Log de pasos del pipeline</h2>
+<div class="card">
+{% if pasos %}
+<table><tr><th>Corrida</th><th>Paso</th><th>Estado</th><th>Detalle</th><th class="r">ms</th></tr>
+{% for p in pasos %}<tr><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">{{ p.corrida }}</td><td>{{ p.paso }}</td>
+<td><span class="badge {% if p.estado == 'OK' %}g{% else %}r{% endif %}">{{ p.estado }}</span></td>
+<td>{{ p.detalle }}</td><td class="r">{{ p.duracion_ms }}</td></tr>{% endfor %}
+</table>
+{% else %}<p>Sin pasos registrados.</p>{% endif %}
+</div>
+
+<h2>Vigilancia de reescritura de la fuente</h2>
+<div class="card">
+{% if vigilancia %}
+<table><tr><th>Mes</th><th>Resultado</th><th>Detalle</th><th>Fecha</th></tr>
+{% for v in vigilancia %}<tr><td>{{ v.aaaamm }}</td>
+<td><span class="badge {% if v.resultado == 'OK_PRIMERA' or v.resultado == 'OK' %}g{% else %}w{% endif %}">{{ v.resultado }}</span></td>
+<td style="max-width:340px;overflow:hidden;text-overflow:ellipsis">{{ v.detalle }}</td><td>{{ v.fecha|date:"d/m H:i" }}</td></tr>{% endfor %}
+</table>
+{% else %}<p>Sin chequeos.</p>{% endif %}
+</div>
 
 <h2>Deriva por año (huecos declarados)</h2>
-<div style="max-height:400px;overflow:auto">
+<div class="card">
+<div style="max-height:360px;overflow:auto">
 <table><tr><th>Conjunto</th><th>Campo</th><th>Año</th><th class="r">Llenado</th></tr>
 {% for d in deriva %}<tr><td>{{ d.CONJUNTO }}</td><td>{{ d.CAMPO }}</td><td>{{ d.ANIO }}</td>
 <td class="r">{% if not d.LLENADO_PCT %}<span class="badge wa">hueco</span>{% else %}<span class="{% if d.LLENADO_PCT < 50 %}bad{% elif d.LLENADO_PCT < 95 %}wa{% else %}ok{% endif %}">{{ d.LLENADO_PCT|floatformat:1 }}%</span>{% endif %}</td></tr>{% endfor %}
-</table></div>
-
-<h2>Tests como gate</h2>
-<table><tr><th>Corrida</th><th>Test</th><th>Resultado</th><th>Valor</th></tr>
-{% for t in tests %}<tr><td>{{ t.CORRIDA_ID }}</td><td>{{ t.TEST }}</td>
-<td><span class="badge {% if t.RESULTADO == 'PASS' %}g{% else %}r{% endif %}">{{ t.RESULTADO }}</span></td><td>{{ t.VALOR_OBTENIDO }}</td></tr>{% endfor %}
 </table>
+</div>
+</div>
 
-<h2>Corridas</h2>
-<table><tr><th>Corrida</th><th>Estado</th><th>Alcance</th><th>Inicio</th></tr>
-{% for c in corridas %}<tr><td>{{ c.CORRIDA_ID }}</td><td><span class="badge {% if c.ESTADO == 'PUBLICADO' %}g{% elif c.ESTADO == 'BLOQUEADO' %}r{% else %}w{% endif %}">{{ c.ESTADO }}</span></td><td>{{ c.ALCANCE }}</td><td>{{ c.INICIADO_EN|date:"d/m H:i" }}</td></tr>{% endfor %}
-</table>
-
-<h2>Log de pasos del pipeline (corrida_paso)</h2>
-<table><tr><th>Corrida</th><th>Paso</th><th>Estado</th><th>Detalle</th><th>ms</th><th>Cuándo</th></tr>
-{% for p in pasos %}<tr><td>{{ p.corrida }}</td><td>{{ p.paso }}</td><td><span class="badge {% if p.estado == 'OK' %}g{% else %}r{% endif %}">{{ p.estado }}</span></td><td>{{ p.detalle }}</td><td>{{ p.duracion_ms }}</td><td>{{ p.creado_en|date:"d/m H:i:s" }}</td></tr>{% endfor %}
-</table>
-
-<h2>Vigilancia de reescritura</h2>
-<table><tr><th>Mes</th><th>Resultado</th><th>Detalle</th><th>Fecha</th></tr>
-{% for v in vigilancia %}<tr><td>{{ v.aaaamm }}</td><td>{{ v.resultado }}</td><td>{{ v.detalle }}</td><td>{{ v.fecha|date:"d/m H:i" }}</td></tr>{% endfor %}
-</table>
-
-<h2>Campos con trampa documentada (catalogo_campo)</h2>
+<h2>Campos con trampa documentada</h2>
+<div class="card">
+{% if campos %}
 <table><tr><th>Tabla</th><th>Campo</th><th>Trampa</th><th>Unidad</th></tr>
 {% for c in campos %}<tr><td>{{ c.TABLA }}</td><td>{{ c.CAMPO }}</td><td class="bad">{{ c.TRAMPA }}</td><td>{{ c.UNIDAD|default:"—" }}</td></tr>{% endfor %}
 </table>
+{% else %}<p>Sin trampas documentadas.</p>{% endif %}
+</div>
 {% endblock %}
