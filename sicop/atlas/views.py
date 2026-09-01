@@ -275,18 +275,34 @@ def _actividad_mcp(dedup=True):
     por_herramienta = sorted(por_herramienta.items(), key=lambda kv: -kv[1])
 
     ultimas = []
+    n_lentas = 0
     for r in rows[:15]:
         params = (r.parametros or "").replace("\u20a1", "")
         if len(params) > 60:
             params = params[:60] + "…"
+        if (r.duracion_ms or 0) >= 3000:
+            n_lentas += 1
         ultimas.append({
-            "hora": (r.timestamp or desde).strftime("%d/%m %H:%M:%S"),
+            "hora": (r.timestamp or desde).strftime("%d/%m %H:%M"),
             "herramienta": r.herramienta,
             "params": params,
             "ms": r.duracion_ms,
             "agente": r.agente,
         })
-    return {"total": len(rows), "por_herramienta": por_herramienta, "ultimas": ultimas}
+    # top tools con pct (para barras) y max para escalar
+    top = por_herramienta[:10]
+    max_n = max((n for _, n in top), default=1)
+    top_bars = [{"tool": t, "n": n, "pct": round(n / max_n * 100)} for t, n in top]
+    lentas = [u for u in ultimas if (u["ms"] or 0) >= 3000]
+    return {
+        "total": len(rows),
+        "por_herramienta": por_herramienta,
+        "tools_distintas": len(por_herramienta),
+        "top": top_bars,
+        "n_lentas": n_lentas,
+        "ultimas": ultimas,
+        "lentas": lentas,
+    }
 
 
 def mcp_docs(request):

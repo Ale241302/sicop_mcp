@@ -48,6 +48,12 @@ details.tool-card[open] summary{background:#f0f7f1;color:#1b5e20}
 .tool-detalle{padding:8px 14px 12px;border-top:1px dashed #d5d9de}
 .tool-detalle p{margin:6px 0}
 .tool-detalle ul{margin:4px 0 6px 18px}
+.bars{display:flex;flex-direction:column;gap:5px;margin:10px 0 18px}
+.bar-row{display:flex;align-items:center;gap:8px;font:12px/1 monospace}
+.bar-label{width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5c4a20}
+.bar-track{flex:1;background:#EFEBE4;border-radius:3px;height:16px;overflow:hidden}
+.bar-fill{display:block;height:100%;background:linear-gradient(90deg,#0E8C7A,#18A98F);border-radius:3px}
+.bar-n{width:34px;text-align:right;font-weight:700}
 </style>
 
 <h2>Guía por tool ({{ total_tools }})</h2>
@@ -78,16 +84,35 @@ details.tool-card[open] summary{background:#f0f7f1;color:#1b5e20}
 
 <h2>Actividad MCP reciente (últimas 24 h)</h2>
 <div class="card">
-<p><b>{{ actividad.total }}</b> llamadas{% if actividad.total %} · por tool: {% for h, n in actividad.por_herramienta %}<code>{{ h }}</code> ×{{ n }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</p>
+<div class="kpis">
+  <div class="kpi"><div class="n">{{ actividad.total }}</div><div class="l">llamadas</div></div>
+  <div class="kpi"><div class="n">{{ actividad.tools_distintas }}</div><div class="l">tools usadas</div></div>
+  <div class="kpi"><div class="n {% if actividad.n_lentas %}bad{% endif %}">{{ actividad.n_lentas }}</div><div class="l">lentas (&gt;3s)</div></div>
+  <div class="kpi"><div class="n">{{ actividad.ultimas|length }}</div><div class="l">últimas</div></div>
+</div>
+
+<h3>Tools más usadas</h3>
+<div class="bars">
+{% for t in actividad.top %}
+<div class="bar-row"><span class="bar-label"><code>{{ t.tool }}</code></span>
+<span class="bar-track"><span class="bar-fill" style="width:{{ t.pct }}%"></span></span>
+<span class="bar-n">{{ t.n }}</span></div>
+{% empty %}
+<p>Sin actividad en las últimas 24 h.</p>
+{% endfor %}
+</div>
+
+<h3>Últimas llamadas</h3>
 <table>
-<tr><th>Hora</th><th>Tool</th><th>Parámetros</th><th>Cuánto tardamos</th></tr>
+<tr><th>Hora</th><th>Tool</th><th>Parámetros</th><th class="r">Tiempo</th></tr>
 {% for u in actividad.ultimas %}
-<tr><td>{{ u.hora }}</td><td><code>{{ u.herramienta }}</code></td><td>{{ u.params }}</td><td class="r">{% if u.ms %}{{ u.ms }} ms{% else %}—{% endif %}</td></tr>
+<tr><td>{{ u.hora }}</td><td><code>{{ u.herramienta }}</code></td><td>{{ u.params }}</td>
+<td class="r">{% if u.ms %}{% if u.ms >= 3000 %}<span class="badge r">{{ u.ms }} ms</span>{% else %}{{ u.ms }} ms{% endif %}{% else %}—{% endif %}</td></tr>
 {% empty %}
 <tr><td colspan="4">Sin llamadas en las últimas 24 h.</td></tr>
 {% endfor %}
 </table>
-<p class="sobre"><b>Nota</b> Tiempo = lo que tardó el servidor SICOP en devolver la respuesta a Claude.ai para esa consulta. Muestra hasta 15 llamadas (deduplicadas).</p>
+<p class="sobre"><b>Nota</b> Tiempo = lo que tardó el servidor SICOP en devolver la respuesta a Claude.ai para esa consulta. Las llamadas lentas (&gt;3s) se marcan en rojo.</p>
 </div>
 
 <p class="sobre"><b>Reglas de medición</b> Toda cifra declara su nivel: captación (adjudicaciones), ejecución (órdenes de pedido) o entrega (recepciones). Monedas: CRC | USD | EUR | JPY | GBP — nunca sumar sin convertir. Los huecos de datos están declarados en la deriva.</p>
