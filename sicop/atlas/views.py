@@ -375,9 +375,25 @@ def mercado(request, familia):
 
 
 def proveedores(request):
-    from sicop.models import FactAdjudicacion
+    from django.db.models import Count, Sum
+
+    from sicop.models import FactAdjudicacion, SicopProveedores
+
+    # solo cedulas validas (excluye NULL y vacias); agrupa por cedula (no por
+    # (cedula,nombre): el nombre varia por spelling y parte el ranking)
     top = list(
-        FactAdjudicacion.objects.exclude(CEDULA_PROVEEDOR="").values("CEDULA_PROVEEDOR", "NOMBRE_PROVEEDOR")
-        .annotate(m=Sum("MONTO_ADJUDICADO_CRC"), n=Count("id")).order_by("-m")[:50]
+        FactAdjudicacion.objects
+        .exclude(CEDULA_PROVEEDOR__isnull=True).exclude(CEDULA_PROVEEDOR="")
+        .values("CEDULA_PROVEEDOR")
+        .annotate(m=Sum("MONTO_ADJUDICADO_CRC"), n=Count("id"))
+        .order_by("-m")[:50]
     )
+    # resolver nombre desde el dim (proveedores) cuando la adjudicacion no lo trae
+    ceds = [r["CEDULA_PROVEEDOR"] for r in top]
+    names = dict(
+        SicopProveedores.objects.filter(CEDULA_PROVEEDOR__in=ceds)
+        .values_list("CEDULA_PROVEEDOR", "NOMBRE_PROVEEDOR")
+    )
+    for r in top:
+        r["NOMBRE_PROVEEDOR"] = r.get("NOMBRE_PROVEEDOR") or names.get(r["CEDULA_PROVEEDOR"])
     return render(request, "atlas/proveedores.html", {"top": top, "fmt": _fmt, "titulo": "Proveedores"})

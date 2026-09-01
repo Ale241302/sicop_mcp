@@ -4,8 +4,8 @@
 <h1>Proveedores por monto adjudicado</h1>
 <table><tr><th>#</th><th>Cédula</th><th>Nombre</th><th class="r">Monto CRC</th><th class="r">Líneas</th></tr>
 {% for p in top %}<tr><td>{{ forloop.counter }}</td>
-<td><a href="/atlas/proveedor/{{ p.CEDULA_PROVEEDOR }}/">{{ p.CEDULA_PROVEEDOR }}</a></td>
-<td>{{ p.NOMBRE_PROVEEDOR|default:"—" }}</td><td class="r">₡{{ p.m|floatformat:0 }}</td><td class="r">{{ p.n }}</td></tr>{% endfor %}
+<td>{% if p.CEDULA_PROVEEDOR and p.NOMBRE_PROVEEDOR %}<a href="/atlas/proveedor/{{ p.CEDULA_PROVEEDOR }}/">{{ p.CEDULA_PROVEEDOR }}</a>{% else %}{{ p.CEDULA_PROVEEDOR|default:"—" }}{% endif %}</td>
+<td>{{ p.NOMBRE_PROVEEDOR|default:"—" }}</td><td class="r">{% if p.m is not None %}₡{{ p.m|floatformat:0 }}{% else %}—{% endif %}</td><td class="r">{{ p.n }}</td></tr>{% endfor %}
 </table>
 <div class="sobre"><b>Sobre</b>nivel_medicion: captación (adjudicaciones). El negocio real vive en ejecución (cartera) — ver la ficha de cada uno.</div>
 {% endblock %}
