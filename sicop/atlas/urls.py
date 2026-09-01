@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("favicon.svg", views.favicon, name="atlas-favicon"),
     path("", views.index, name="atlas"),
     path("buscar/", views.buscar, name="atlas-buscar"),
     path("proveedores/", views.proveedores, name="atlas-proveedores"),

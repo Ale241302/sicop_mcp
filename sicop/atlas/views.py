@@ -92,23 +92,51 @@ def procedimiento(request, nro):
     })
 
 
-def calidad(request):
+def _bronze_count():
+    """Conteo de bronze rapido y robusto: cache 6h; si expiro, usa reltuples de
+    pg_class (instantaneo, aproximado) y dispara el conteo exacto en background.
+    Evita bloquear la pagina con un count(*) de ~16s sobre 90M filas."""
     from django.core.cache import cache
 
-    from sicop.models import (CtlDeriva, CtlTest, CtlCorrida, CatalogoCampo,
-                              VigilanciaCheck, BronzeFila, CorridaPaso)
-
-    # el count de bronze (89M filas) es caro -> se cachea ~6h (solo cambia en el ciclo)
     try:
-        bronze = cache.get("sicop:bronze:count")
+        c = cache.get("sicop:bronze:count")
+        if c is not None:
+            return c
     except Exception:  # noqa: BLE001
-        bronze = None
-    if bronze is None:
-        bronze = BronzeFila.objects.count()
-        try:
-            cache.set("sicop:bronze:count", bronze, 6 * 3600)
-        except Exception:  # noqa: BLE001
-            pass
+        pass
+    try:
+        from django.db import connection
+
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT c.reltuples::bigint FROM pg_class c WHERE c.relname='bronze_fila'")
+            approx = cur.fetchone()[0]
+    except Exception:  # noqa: BLE001
+        approx = None
+    try:
+        import threading
+
+        threading.Thread(target=_warm_bronze_count, daemon=True).start()
+    except Exception:  # noqa: BLE001
+        pass
+    return approx
+
+
+def _warm_bronze_count():
+    """Conteo EXACTO de bronze en background, para poblar el cache sin bloquear."""
+    from django.core.cache import cache
+
+    from sicop.models import BronzeFila
+
+    try:
+        cache.set("sicop:bronze:count", BronzeFila.objects.count(), 6 * 3600)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def calidad(request):
+    from sicop.models import (CtlDeriva, CtlTest, CtlCorrida, CatalogoCampo,
+                              VigilanciaCheck, CorridaPaso)
 
     ctx = {
         "deriva": list(CtlDeriva.objects.order_by("CONJUNTO", "ANIO", "CAMPO")[:300]),
@@ -117,7 +145,7 @@ def calidad(request):
         "campos": list(CatalogoCampo.objects.exclude(TRAMPA__isnull=True)[:40]),
         "vigilancia": list(VigilanciaCheck.objects.order_by("-fecha")[:20]),
         "pasos": list(CorridaPaso.objects.order_by("-id")[:60]),
-        "bronze": bronze,
+        "bronze": _bronze_count(),
     }
     return render(request, "atlas/calidad.html", ctx)
 
@@ -324,6 +352,21 @@ def mcp_docs(request):
         "actividad": _actividad_mcp(),
         "grupos": grouped,
     })
+
+
+def favicon(request):
+    """Sirve el favicon del Atlas (SVG). Tambien responde en /favicon.ico."""
+    from django.http import HttpResponse
+    import os
+
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.svg")
+    try:
+        with open(p, "rb") as f:
+            svg = f.read()
+    except OSError:
+        return HttpResponse(status=404)
+    return HttpResponse(svg, content_type="image/svg+xml",
+                        headers={"Cache-Control": "public, max-age=86400"})
 
 
 def mercado(request, familia):

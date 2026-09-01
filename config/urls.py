@@ -7,6 +7,7 @@ from sicop.api.views import api_root
 
 urlpatterns = [
     path("", RedirectView.as_view(url="/atlas/", permanent=False)),
+    path("favicon.ico", RedirectView.as_view(url="/atlas/favicon.svg", permanent=True)),
     path("admin/", admin.site.urls),
     path("api/v1/", include("sicop.api.urls")),
     path("api/v1/", api_root),
