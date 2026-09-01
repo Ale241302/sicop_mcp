@@ -469,4 +469,14 @@ def proveedores(request):
     )
     for r in top:
         r["NOMBRE_PROVEEDOR"] = r.get("NOMBRE_PROVEEDOR") or names.get(r["CEDULA_PROVEEDOR"])
-    return render(request, "atlas/proveedores.html", {"top": top, "fmt": _fmt, "titulo": "Proveedores"})
+    montos = [r["m"] for r in top if r["m"] is not None]
+    bmax = max(montos) if montos else None
+    stats = {
+        "max": bmax,
+        "min": min(montos) if montos else None,
+        "suma": sum(montos) if montos else None,
+        "nombrados": sum(1 for r in top if r.get("NOMBRE_PROVEEDOR")),
+    }
+    for r in top:
+        r["pct"] = round(float(r["m"]) / float(bmax) * 100) if (r["m"] is not None and bmax) else 0
+    return render(request, "atlas/proveedores.html", {"top": top, "fmt": _fmt, "titulo": "Proveedores", "stats": stats})
