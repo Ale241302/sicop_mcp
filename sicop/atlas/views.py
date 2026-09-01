@@ -362,11 +362,31 @@ def mcp_docs(request):
         ("Log del pipeline", "¿Qué pasó en la última corrida del ciclo? (corrida_pasos)"),
     ]
 
+    # estadisticas del benchmark para la visualizacion (KPIs + barras)
+    import statistics
+
+    bv = [v for v in bench.values() if v is not None]
+    bench_stats = {
+        "total": len(bench),
+        "mediana": int(statistics.median(bv)) if bv else None,
+        "lenta": max(bench.items(), key=lambda kv: kv[1] or 0),
+        "rapida": min(bench.items(), key=lambda kv: kv[1] if kv[1] is not None else 10**12),
+        "lentas_2s": sum(1 for v in bv if v >= 2000),
+    }
+    bmax = max(bv) if bv else 1
+    bench_bars = []
+    for t, ms in sorted(bench.items(), key=lambda kv: (kv[1] is None, kv[1] or 0)):
+        m = ms or 0
+        pct = round((m / bmax) ** 0.5 * 100) if bmax else 0  # escala raiz: legible
+        cls = "fast" if m < 300 else ("med" if m < 2000 else "slow")
+        bench_bars.append((t, m, pct, cls))
+
     return render(request, "atlas/mcp.html", {
         "tools": tools, "bench": bench, "ejemplos": ejemplos_uso,
         "total_tools": len(tools), "titulo": "Documentación MCP",
         "actividad": _actividad_mcp(),
         "grupos": grouped,
+        "bench_stats": bench_stats, "bench_bars": bench_bars,
     })
 
 

@@ -30,13 +30,24 @@ La respuesta trae el <code>mcp-session-id</code> en el header; usalo en las llam
 </table>
 </div>
 
-<h2>Tiempos de respuesta (benchmark en vivo · {{ bench|length }} tools)</h2>
+<h2>Tiempos de respuesta (benchmark · {{ bench|length }} tools)</h2>
 <div class="card">
-<table>
-<tr><th>Tool</th><th>ms</th></tr>
-{% for name, ms in bench.items %}<tr><td><code>{{ name }}</code></td><td class="r">{% if ms %}{{ ms }} ms{% else %}—{% endif %}</td></tr>{% endfor %}
-</table>
-<p class="sobre"><b>Nota</b> Medidos contra el servidor público, en paralelo, sobre datos de ejemplo (solo lectura). Se excluyen las tools que mutan el sistema (reparar_mes, ciclo_diario, registrar_resultado), las que consultan servicios externos (cgr_buscar) y los experimentos de Fase 4 (backtest, holdout, ficha_esosa). El resumen y el TC del día están cacheados.</p>
+<div class="kpis">
+  <div class="kpi"><div class="n">{{ bench_stats.total }}</div><div class="l">tools medidas</div></div>
+  <div class="kpi"><div class="n">{{ bench_stats.mediana }} ms</div><div class="l">mediana</div></div>
+  <div class="kpi"><div class="n ok">{{ bench_stats.rapida.1 }} ms</div><div class="l">más rápida · {{ bench_stats.rapida.0 }}</div></div>
+  <div class="kpi"><div class="n {% if bench_stats.lenta.1 >= 5000 %}bad{% elif bench_stats.lenta.1 >= 2000 %}wa{% endif %}">{{ bench_stats.lenta.1 }} ms</div><div class="l">más lenta · {{ bench_stats.lenta.0 }}</div></div>
+</div>
+<div class="bars">
+{% for t, ms, pct, cls in bench_bars %}
+<div class="bar-row"><span class="bar-label"><code>{{ t }}</code></span>
+<span class="bar-track"><span class="bar-fill {{ cls }}" style="width:{{ pct }}%"></span></span>
+<span class="bar-n {{ cls }}">{{ ms }} ms</span></div>
+{% empty %}
+<p>Benchmark en cálculo…</p>
+{% endfor %}
+</div>
+<p class="sobre"><b>Nota</b> Medidos contra el servidor público, en paralelo, sobre datos de ejemplo (solo lectura). Color: <span class="ok">verde</span> &lt;300ms · <span class="wa">ámbar</span> 300–2000ms · <span class="bad">rojo</span> &gt;2000ms. Se excluyen tools que mutan (reparar_mes, ciclo_diario, registrar_resultado), externas (cgr_buscar) y experimentos Fase 4.</p>
 </div>
 
 <style>
@@ -53,7 +64,11 @@ details.tool-card[open] summary{background:#f0f7f1;color:#1b5e20}
 .bar-label{width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5c4a20}
 .bar-track{flex:1;background:#EFEBE4;border-radius:3px;height:16px;overflow:hidden}
 .bar-fill{display:block;height:100%;background:linear-gradient(90deg,#0E8C7A,#18A98F);border-radius:3px}
-.bar-n{width:34px;text-align:right;font-weight:700}
+.bar-fill.fast{background:linear-gradient(90deg,#0E8C7A,#18A98F)}
+.bar-fill.med{background:linear-gradient(90deg,#9A5B00,#C77E2E)}
+.bar-fill.slow{background:linear-gradient(90deg,#B3261E,#D6453D)}
+.bar-n{width:70px;text-align:right;font-weight:700}
+.bar-n.slow{color:var(--bad)}.bar-n.med{color:var(--wa)}.bar-n.fast{color:var(--ok)}
 </style>
 
 <h2>Guía por tool ({{ total_tools }})</h2>
