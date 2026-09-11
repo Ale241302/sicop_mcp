@@ -30,28 +30,60 @@ def _fmtn(n):
         return "—"
 
 
-def index(request):
+def _reltuples_count(cache_key, table):
+    """Conteo rapido y no bloqueante: cache 6h; si expiro usa reltuples de
+    pg_class (aprox instantaneo) y dispara el conteo exacto en background.
+    Evita que un count(*) de millones de filas mate al worker por timeout/OOM
+    (caso /atlas/ del 2026-09-11: FactOrden.objects.count() > 120s)."""
     from django.core.cache import cache
 
-    from sicop.models import (CtlTest, CtlDeriva, Senal, CtlCorrida, FactAdjudicacion,
-                              FactOrden, FactOferta, SicopInvitaciones)
-
-    clave = "sicop:atlas:resumen:v1"
     try:
-        resumen = cache.get(clave)
-    except Exception:  # noqa: BLE001  (Redis caido -> computar sin cache)
-        resumen = None
-    if resumen is None:
-        resumen = {
-            "adjudicaciones": FactAdjudicacion.objects.count(),
-            "ofertas": FactOferta.objects.count(),
-            "ordenes": FactOrden.objects.count(),
-            "invitaciones": SicopInvitaciones.objects.count(),
-        }
-        try:
-            cache.set(clave, resumen, 6 * 3600)
-        except Exception:  # noqa: BLE001
-            pass
+        c = cache.get(cache_key)
+        if c is not None:
+            return c
+    except Exception:  # noqa: BLE001  (Redis caido -> usar reltuples)
+        pass
+    try:
+        from django.db import connection
+
+        with connection.cursor() as cur:
+            cur.execute("SELECT c.reltuples::bigint FROM pg_class c WHERE c.relname=%s", [table])
+            fila = cur.fetchone()
+            approx = fila[0] if fila else None
+    except Exception:  # noqa: BLE001
+        approx = None
+    try:
+        import threading
+
+        threading.Thread(target=_warm_count, args=(cache_key, table), daemon=True).start()
+    except Exception:  # noqa: BLE001
+        pass
+    return approx
+
+
+def _warm_count(cache_key, table):
+    """Conteo EXACTO de una tabla en background, para poblar el cache sin bloquear."""
+    from django.apps import apps
+    from django.core.cache import cache
+
+    modelo = next((m for m in apps.get_models() if m._meta.db_table == table), None)
+    if modelo is None:
+        return
+    try:
+        cache.set(cache_key, modelo.objects.count(), 6 * 3600)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def index(request):
+    from sicop.models import CtlTest, CtlDeriva, Senal, CtlCorrida
+
+    resumen = {
+        "adjudicaciones": _reltuples_count("sicop:atlas:count:fact_adjudicacion", "fact_adjudicacion"),
+        "ofertas": _reltuples_count("sicop:atlas:count:fact_oferta", "fact_oferta"),
+        "ordenes": _reltuples_count("sicop:atlas:count:fact_orden", "fact_orden"),
+        "invitaciones": _reltuples_count("sicop:atlas:count:sicop_invitaciones", "sicop_invitaciones"),
+    }
 
     tests = list(CtlTest.objects.order_by("-id")[:8])
     corridas = list(CtlCorrida.objects.order_by("-INICIADO_EN")[:6])
