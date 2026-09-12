@@ -91,22 +91,32 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
                     detalle_ok=lambda c: f"meses revisados; cambios={c}")
     recargados = []
     if cambios and reprocesar:
+        from collections import defaultdict
+
         from sicop import bronze, loader, silver
 
         extractor = os.path.join(settings.SICOP_SCRIPTS_DIR, "harness_actualizado", "sicop_loop.py")
         out = settings.SICOP_RECOVERY_DIR
+        # Agrupar los meses cambiados por anio y reemplazar SOLO esos meses con
+        # --replace: re-descarga el zip reescrito y reprocesa ese mes. Antes se
+        # corria --year <anio> --force, que reconstruia los 12 meses aunque solo
+        # uno hubiera cambiado (4-6 h, ~38% CPU).
+        por_anio = defaultdict(list)
         for m in cambios:
             senales._emit(corrida, "cambio_hash_fuente", "alta", "", None,
                           f"la fuente reescribio {m}", "reprocesar el mes", m)
-            # anio completo, con --pesados (invitaciones + ordenes_pedido) y --force
-            # (reconstruye el archivo del anio en fresco; el _cache solo re-descarga
-            # el mes que cambio).
-            rc = _paso(corrida, f"extractor_{m[:4]}",
-                       lambda: _run([sys.executable, extractor, "--year", m[:4],
-                                     "--pesados", "--force", "--no-vigilancia", "--out", out],
-                                    cwd=os.path.dirname(extractor)),
-                       detalle_ok=lambda r: f"anio {m[:4]} re-extraido rc={r}",
-                       detalle_err=lambda e: f"extractor {m[:4]}: {e}")
+            por_anio[m[:4]].append(m[4:])
+        for y, mms in sorted(por_anio.items()):
+            meses_arg = ",".join(sorted(set(mms)))
+            rc = _paso(corrida, f"extractor_{y}_{meses_arg}",
+                       lambda y=y, meses_arg=meses_arg: _run(
+                           [sys.executable, extractor, "--year", y, "--pesados",
+                            "--months", meses_arg, "--replace", "--no-vigilancia",
+                            "--out", out],
+                           cwd=os.path.dirname(extractor)),
+                       detalle_ok=lambda r, y=y, meses_arg=meses_arg:
+                           f"anio {y} meses {meses_arg} re-extraidos rc={r}",
+                       detalle_err=lambda e, y=y: f"extractor {y}: {e}")
         # recargar a Postgres el/los anio(s) afectado(s)
         for y in sorted({m[:4] for m in cambios}):
             def _recargar(y=y):
@@ -149,12 +159,46 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
     if gold:
         _paso(corrida, "gold", lambda: run_derivadas(None),
               detalle_ok=lambda _: "derivadas (gold) recalculadas")
-        ok, failed = _paso(corrida, "tests",
-                           lambda: control.run_tests(corrida),
-                           detalle_ok=lambda r: f"{len(r[0])} PASS / {len(r[1])} FAIL")
-        fallidos = (failed or [])
+        # tras un gold largo (5-10 min) la conexion Django puede quedar con un
+        # cursor server-side heredado que muere en el gate de tests ("cursor
+        # _django_curs_... does not exist"). Cerrar para que tests abran conexion
+        # fresca (cursores server-side de silver/derivadas NO se tocan).
+        try:
+            from django.db import connection
+            connection.close()
+        except Exception:  # noqa: BLE001
+            pass
+        # INTEGRIDAD: derivadas.run() no retorna nada (None tambien en exito),
+        # asi que el exito se lee del paso registrado en corrida_paso, NO del
+        # retorno de _paso. Si el paso gold quedo ERROR, NO servimos tests/capas
+        # como si el dato fuera nuevo -> corrida BLOQUEADO y autocorregir re-corre.
+        gold_ok = CorridaPaso.objects.filter(
+            corrida=corrida, paso="gold", estado="OK").exists()
+        if not gold_ok:
+            fallidos = ["gold: derivadas no recalcularon (paso ERROR)"]
+            ok = []
+        else:
+            res_tests = _paso(corrida, "tests",
+                              lambda: control.run_tests(corrida),
+                              detalle_ok=lambda r: f"{len(r[0])} PASS / {len(r[1])} FAIL")
+            # robustez: _paso devuelve None si el paso lanzo excepcion; tratar
+            # como fallo de tests (no crashear el ciclo con TypeError).
+            if res_tests is None:
+                ok, failed = [], ["tests: paso fallo (excepcion interna)"]
+            else:
+                ok, failed = res_tests
+            fallidos = (failed or [])
         control.cerrar_corrida(corrida, "PUBLICADO" if not fallidos else "BLOQUEADO",
                                notas=f"senales={n}; tests={len(fallidos)} fallidos")
+        # 5b) CAPAS DERIVADAS: SOLO si el gold + gate pasaron (el dato que se
+        # sirve es el nuevo). Si gold/tests fallaron la corrida queda BLOQUEADO
+        # y autocorregir re-corre gold+tests; las capas se sincronizan entonces.
+        if not fallidos:
+            from sicop.sync_capas import sync_capas as run_sync_capas
+
+            _paso(corrida, "capas", lambda: run_sync_capas(corrida=f"{corrida}-capas"),
+                  detalle_ok=lambda r: f"{len(r['pasos'])} pasos; "
+                                       f"{sum(1 for p in r['pasos'] if p['estado']=='OK')} OK")
     else:
         control.cerrar_corrida(corrida, "OK", notas=f"senales={n}")
 

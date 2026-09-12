@@ -1,4 +1,4 @@
-﻿"""
+"""
 Django settings for sicop_mcp.
 """
 
@@ -70,6 +70,7 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "sicop_dev_2026"),
         "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "CONN_MAX_AGE": int(os.environ.get("PG_CONN_MAX_AGE", "300")),
     }
 }
 
@@ -132,21 +133,41 @@ CELERY_TIMEZONE = "America/Costa_Rica"
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 7200}  # 2h
 
-# ---- FASE 2: ciclo diario 06:00 + vigilancia ----
+# ---- FASE 2: ciclo diario 00:00 CR (domingo-viernes) + vigilancia ----
+# El ciclo corre UNA vez al dia a las 00:00 hora CR, de domingo a viernes
+# (NO sabado). Es la unica ventana en que puede dispararse la re-extraccion
+# pesada (sicop_loop.py --pesados, 4-6 h, ~38% CPU) cuando la fuente reescribe
+# un mes: a esa hora nadie usa el sistema y el CPU queda libre el resto del dia.
 from celery.schedules import crontab
 
+DIAS_CR = (0, 1, 2, 3, 4, 5)  # cron: 0=domingo ... 5=viernes (6=sabado, excluido)
+
 CELERY_BEAT_SCHEDULE = {
-    "ciclo-diario-06-00": {
+    "ciclo-diario-00-00": {
         "task": "sicop.ciclo_diario",
-        "schedule": crontab(hour=(6, 18), minute=0),
+        "schedule": crontab(day_of_week=DIAS_CR, hour=0, minute=0),
     },
-    "vigilancia-reescritura-06-05": {
+    "vigilancia-reescritura-00-05": {
         "task": "sicop.vigilancia_reescritura",
-        "schedule": crontab(hour=(6, 18), minute=5),
+        "schedule": crontab(day_of_week=DIAS_CR, hour=0, minute=5),
     },
-    "consolidar-resultados-06-15": {
+    "consolidar-resultados-00-15": {
         "task": "sicop.consolidar_resultados",
-        "schedule": crontab(hour=(6, 18), minute=15),
+        "schedule": crontab(day_of_week=DIAS_CR, hour=0, minute=15),
+    },
+    "sync-capas-00-20": {
+        "task": "sicop.sync_capas",
+        "schedule": crontab(day_of_week=DIAS_CR, hour=0, minute=20),
+    },
+    "retencion-anual-01-01": {
+        "task": "sicop.retencion_anual",
+        "schedule": crontab(month_of_year=1, day_of_month=1, hour=4, minute=30),
+    },
+    # Limpieza de disco semanal: lunes 04:10 (dry_run por defecto; la primera
+    # corrida real se dispara a mano con --ejecutar/dry_run=False tras validar).
+    "limpieza-disco-semanal": {
+        "task": "sicop.limpieza_disco",
+        "schedule": crontab(day_of_week=1, hour=4, minute=10),
     },
 }
 
