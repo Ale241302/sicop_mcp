@@ -85,7 +85,7 @@ def _reconstruir_gold_invitaciones():
                 SELECT "NRO_SICOP","NUMERO_PROCEDIMIENTO","CEDULA_PROVEEDOR","NOMBRE_PROVEEDOR",
                        "CED_INSTITUCION","INSTITUCION","FECHA_INVITACION",
                        min("MES_ZIP") AS MES_PRIMERA_VISTA
-                FROM sicop.sicop_invitaciones
+                FROM public.sicop_invitaciones
                 GROUP BY 1,2,3,4,5,6,7
             """)
             # indices con nombre TEMPORAL (sin colision con la tabla vigente);

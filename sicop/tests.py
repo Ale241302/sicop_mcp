@@ -70,8 +70,8 @@ class RebuildGoldInvitacionesTest(SimpleTestCase):
                 re.search(r"(?<!sicop\.)gold_invitaciones", limpio),
                 msg=f"referencia sin esquema: {sql}",
             )
-        self.assertTrue(any("sicop.sicop_invitaciones" in s for s in log),
-                        "el origen debe venir de sicop.sicop_invitaciones")
+        self.assertTrue(any("public.sicop_invitaciones" in s for s in log),
+                        "el origen debe venir de public.sicop_invitaciones (la cruda vive en public)")
         self.assertIn("RESET search_path", log,
                       "debe restaurar el search_path que ensucio AGE")
 
