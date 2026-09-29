@@ -2038,11 +2038,18 @@ def producto_specs(codigo_cl, descripcion=None, limit=50):
 
     cod = (codigo_cl or "").strip()
     if not cod and descripcion:
-        # resolver a codigo via el catalogo (trigram / semantica)
+        # resolver a codigo via el catalogo (substring normalizado)
         try:
             qs = GoldCatalogoProductos.objects.filter(f_norm__contains=f_norm_py(descripcion))
             r = qs.values("CODIGO_PRODUCTO_CL", "DESCRIPCION").first()
             cod = r["CODIGO_PRODUCTO_CL"] if r else None
+        except Exception:  # noqa: BLE001
+            cod = None
+    if not cod and descripcion:
+        # fallback: similitud semantica (embedder) cuando el substring no matchea
+        try:
+            res = buscar_productos_semantico(descripcion, limit=1).get("resultados") or []
+            cod = res[0]["codigo_cl"] if res else None
         except Exception:  # noqa: BLE001
             cod = None
     if not cod:
