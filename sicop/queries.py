@@ -968,11 +968,12 @@ def invitaciones_proveedor(cedula, limit=200, institucion=None, anio=None):
         params.extend([f"{anio}-01-01", f"{int(anio) + 1}-01-01"])
     where = " AND ".join(cond)
 
-    rows, total = [], 0
+    rows, total, total_procs = [], 0, 0
     try:
         with connection.cursor() as cur:
-            cur.execute(f"SELECT count(*) FROM sicop.gold_invitaciones gi WHERE {where}", params)
-            total = cur.fetchone()[0]
+            cur.execute(f"SELECT count(*), count(distinct gi.\"NRO_SICOP\") "
+                        f"FROM sicop.gold_invitaciones gi WHERE {where}", params)
+            total, total_procs = cur.fetchone()
             cur.execute(
                 'SELECT gi."NRO_SICOP", gi."NUMERO_PROCEDIMIENTO", gi."CED_INSTITUCION", '
                 'gi."INSTITUCION", gi."FECHA_INVITACION" FROM sicop.gold_invitaciones gi '
@@ -990,6 +991,7 @@ def invitaciones_proveedor(cedula, limit=200, institucion=None, anio=None):
             qs = qs.filter(NRO_SICOP__in=SicopCarteles.objects.filter(
                 FECHA_PUBLICACION__year=int(anio)).values("NRO_SICOP"))
         total = qs.count()
+        total_procs = qs.values("NRO_SICOP").distinct().count()
         rows = list(
             qs.values("NRO_SICOP", "NUMERO_PROCEDIMIENTO", "CED_INSTITUCION", "INSTITUCION",
                       "FECHA_INVITACION")
@@ -999,10 +1001,12 @@ def invitaciones_proveedor(cedula, limit=200, institucion=None, anio=None):
         "cedula": cedula,
         "invitaciones": rows,
         "total": total,
+        "total_procedimientos": total_procs,
         "devueltas": len(rows),
         "truncado": len(rows) < total,
-        "nota": ("si truncado=True hay mas invitaciones que las devueltas: subi limit "
-                 "o filtra por institucion/anio para verlas todas"),
+        "nota": ("'total' = invitaciones (filas); 'total_procedimientos' = procedimientos "
+                 "distintos. Usa el numero que necesites; NO cuentes a mano. Si truncado=True "
+                 "hay mas de las devueltas: subi limit o filtra por institucion/anio."),
     })
 
 
