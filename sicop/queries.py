@@ -1176,7 +1176,15 @@ def buscar_productos_semantico(texto, limit=10):
         ranked = [{"codigo_cl": c, "texto": t, "sim": s,
                    "score": round(_score(t, s), 3)} for c, (t, s) in pool.items()]
         ranked.sort(key=lambda r: -r["score"])
-        return to_plain({"texto": texto, "resultados": ranked[:limit or None]})
+        devueltas = ranked[:limit or None]
+        return to_plain({
+            "texto": texto,
+            "resultados": devueltas,
+            "devueltas": len(devueltas),
+            "total_candidatos": len(ranked),
+            "nota": ("ranking por similitud (pool: top-120 por coseno + coincidencias lexicas): "
+                     "'devueltas' es la profundidad (K) pedida, no el universo."),
+        })
 
 
 def kb_buscar(pregunta, limit=5):
@@ -1195,9 +1203,20 @@ def kb_buscar(pregunta, limit=5):
         ORDER BY e.embedding <=> %s::vector
     """ + ("LIMIT %s" if lim else "LIMIT ALL")
     with connection.cursor() as cur:
+        cur.execute("SELECT count(*) FROM emb_doc WHERE coleccion IN ('KB','NORMATIVA') "
+                    "AND embedding IS NOT NULL")
+        candidatos = cur.fetchone()[0]
         cur.execute(sql, ([vec_str, vec_str, lim] if lim else [vec_str, vec_str]))
         cols = [c[0] for c in cur.description]
-        return to_plain({"pregunta": pregunta, "resultados": [dict(zip(cols, r)) for r in cur.fetchall()]})
+        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+    return to_plain({
+        "pregunta": pregunta,
+        "resultados": rows,
+        "devueltas": len(rows),
+        "total_candidatos": candidatos,
+        "nota": ("ranking por similitud: 'devueltas' es la profundidad (K) pedida, no el "
+                 "universo; 'total_candidatos' es cuantos documentos hay para rankear."),
+    })
 
 
 # ---- FASE D: grafo (Apache AGE) ----

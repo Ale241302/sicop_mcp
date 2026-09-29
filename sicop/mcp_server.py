@@ -17,9 +17,26 @@ from mcp.server.mcpserver import MCPServer
 from . import queries
 
 
+_AVISO_FILAS = 5000
+
+
+def _filas_respuesta(value):
+    """Cuantas filas trae la respuesta (para el aviso de tamano)."""
+    if not isinstance(value, dict):
+        return 0
+    n = value.get("devueltas")
+    if isinstance(n, int):
+        return n
+    for k in ("resultados", "invitados", "competidores", "procedimientos", "ordenes"):
+        if isinstance(value.get(k), list):
+            return len(value[k])
+    return 0
+
+
 def wrap(value):
     """Serializa (Decimal/date/modelos Django -> JSON) y envuelve listas en un
-    dict: el framework MCP 2.x serializa mal una lista top-level."""
+    dict: el framework MCP 2.x serializa mal una lista top-level. Si la respuesta
+    trae muchas filas, agrega un `aviso` (NO recorta: la respuesta queda completa)."""
     from .queries import to_plain
 
     value = to_plain(value)
@@ -27,6 +44,11 @@ def wrap(value):
         value = {"resultados": value, "total": len(value)}
     _limpiar_internos(value)
     _etiquetar_labels(value)
+    n = _filas_respuesta(value)
+    if n > _AVISO_FILAS and "aviso" not in value:
+        value["aviso"] = (f"respuesta grande ({n} filas): es COMPLETA, pero puede ser "
+                          "lenta/pesada. Si no necesitas todo, filtra (nro_sicop, cedula, "
+                          "institucion, anio) o usa offset/limit.")
     return value
 
 
@@ -150,6 +172,9 @@ mcp = MCPServer(
         "LISTAS COMPLETAS: las tools de hechos devuelven `total`, `devueltas` y `truncado`. "
         "Si `truncado` es true la lista NO esta completa: NO la presentes como completa; subi "
         "`limit` (limit=0 = sin limite) o filtra (nro_sicop, cedula, institucion, anio) para verla toda. "
+        "Si la respuesta trae `aviso` de tamano, es COMPLETA pero pesada (no es un recorte). "
+        "En busquedas por similitud (kb/productos) `devueltas` es la profundidad K y "
+        "`total_candidatos` es el universo: K no es el total. "
         "GESTION DEL SISTEMA: podes AUTO-GESTIONAR la base (diagnosticar, reparar, reconciliar). "
         "Usa sicop_diagnostico para ver que necesita atencion, sicop_verificar_procedimiento para una "
         "licitacion especifica, sicop_reconciliar para huecos por mes, sicop_reparar_mes para reparar un mes. "
