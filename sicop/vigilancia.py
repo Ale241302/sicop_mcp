@@ -107,14 +107,31 @@ def revisar_reescritura(corrida=None, aaaamm=None):
                 fecha=now, corrida=corrida)
             continue
         prev = CtlMesFuente.objects.filter(AAAAMM=mes_s).first()
-        prev_etag = prev.HASH_ZIP if prev else None
+        prev_etag = (prev.HASH_ZIP or "") if prev else None
         etag = (h.get("etag") or "").strip('"')
-        if prev_etag and prev_etag != etag:
+        # normalizar: si lo guardado es un sha256 de 64 hex (del manifiesto del
+        # extractor) y el etag actual es formato '0x...', son incompatibles: NO
+        # comparar, solo establecer la linea base con el etag real del server.
+        es_sha = bool(prev_etag) and len(prev_etag) == 64 and all(c in "0123456789abcdef" for c in prev_etag)
+        if prev_etag and not es_sha and prev_etag != etag:
             resultado = "CAMBIO"
             cambios.append(mes_s)
-        elif prev_etag and prev_etag == etag:
+        elif prev_etag and (es_sha or prev_etag == etag):
             resultado = "OK"
+            if es_sha:
+                # actualizar al etag real para comparaciones futuras
+                prev.HASH_ZIP = etag
+                prev.save(update_fields=["HASH_ZIP"])
         else:
+            # OK_PRIMERA: sin linea base. Solo el mes EN CURSO dispara descarga
+            # (un OK_PRIMERA masivo por ctl_mes_fuente incompleto no debe
+            # re-extraer el historico). Se registra el etag como linea base.
+            actual = int(f"{datetime.now().year:04d}{datetime.now().month:02d}")
+            if int(mes_s) >= actual:
+                cambios.append(mes_s)
+            if prev:
+                prev.HASH_ZIP = etag
+                prev.save(update_fields=["HASH_ZIP"])
             resultado = "OK_PRIMERA"
         VigilanciaCheck.objects.create(
             aaaamm=mes_s, etag=etag, content_length=h.get("content_length"),

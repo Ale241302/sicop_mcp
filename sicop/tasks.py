@@ -126,3 +126,58 @@ def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
         return {"corrida": corrida, "estado": "PUBLICADO" if not failed else "BLOQUEADO", "tests_fail": len(failed)}
     finally:
         cache.delete(LOCK)
+
+
+@shared_task(bind=True, name="sicop.sync_capas")
+def sync_capas(self, corrida=None):
+    """FASE C/D/E: sincroniza las capas derivadas (dim_entidad, embeddings, grafo,
+    gold_invitaciones) DESPUES del gold+gate del ciclo diario. Idempotente e
+    incremental. Se dispara desde celery-beat (06:20/18:20) y tambien se corre
+    dentro de sicop.ciclo_diario tras el gate (ver ciclo.py)."""
+    from sicop.sync_capas import sync_capas as run
+
+    return run(corrida=corrida)
+
+
+@shared_task(bind=True, name="sicop.retencion_anual")
+def retencion_anual(self, anio=None, dry_run=True):
+    """FASE R: borrado anual por retencion movil (7 anos). El 1-ene-2027 borra
+    2020 (y el rezago 201912) de la base + grafo. Si dry_run (default) solo
+    cuenta y registra en ctl_retencion sin borrar. Con dry_run=False ejecuta:
+    backup pg_dump -> DELETE por anio en core/gold/bronce/emb_doc/grafo ->
+    re-corre el gate de tests. Nunca borra sin backup previo."""
+    from sicop.control import cerrar_corrida, registrar_corrida
+    from datetime import datetime
+
+    hoy = datetime.now()
+    # el beat corre el 1-ene 04:30: ese dia el anio mas viejo es (anio_actual - 7).
+    # Si se invoca a mano en otra fecha, usa el anio del proximo/actual 1-ene.
+    if hoy.month == 1:
+        anio_1ene = hoy.year
+    else:
+        anio_1ene = hoy.year + 1
+    anio_objetivo = anio or (anio_1ene - 7)  # ventana movil de 7 anos
+    corrida = f"retencion-{anio_objetivo}-{hoy.strftime('%Y%m%d-%H%M%S')}"
+    registrar_corrida(corrida, "retencion_anual",
+                      notas=f"anio={anio_objetivo} dry_run={dry_run}")
+    from sicop.retencion import ejecutar_retencion
+
+    return ejecutar_retencion(corrida, anio_objetivo, dry_run=dry_run)
+
+
+@shared_task(bind=True, name="sicop.limpieza_disco")
+def limpieza_disco(self, dry_run=True):
+    """Operativa: borra archivos intermedios duplicados para liberar disco.
+    NUNCA toca CSVs de salidas (fuente canonica de Postgres) ni ZIPs recientes
+    (la fuente reescribe meses). Dry-run por defecto: cuenta y loguea sin borrar.
+    Con dry_run=False borra CSVs de recuperacion byte-identicos a salidas
+    (>12 meses) y ZIPs de _cache (>24 meses), y vacia _cuarentena."""
+    from datetime import datetime
+
+    from sicop.control import cerrar_corrida, registrar_corrida
+
+    corrida = f"limpieza-disco-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+    registrar_corrida(corrida, "limpieza_disco", notas=f"dry_run={dry_run}")
+    from sicop.limpieza_disco import ejecutar_limpieza
+
+    return ejecutar_limpieza(corrida, dry_run=dry_run)

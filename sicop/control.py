@@ -66,25 +66,35 @@ def run_tests(corrida_id):
                                            match is not None and 30 <= match <= 95,
                                            f"{match:.1f}%" if match else "n/a", "30-95%")
 
-    # 4. toda cedula de fact_orden existe en proveedores
-    provs = set(SicopProveedores.objects.values_list("CEDULA_PROVEEDOR", flat=True))
-    faltan = 0
+    # 4. toda cedula de fact_orden existe en proveedores.
+    #    NOTA: se hace con agregado SQL (NOT EXISTS), NO con .iterator() sobre
+    #    fact_orden: el cursor server-side del iterator muere si la conexion se
+    #    reconecto tras el gold largo ("cursor _django_curs_ does not exist").
+    from django.db import connection as _conn
+
     n_ord = FactOrden.objects.count()
-    if provs and n_ord:
-        for ced in FactOrden.objects.values_list("CEDULA_PROVEEDOR", flat=True).distinct().iterator():
-            if ced and ced not in provs:
-                faltan += 1
+    faltan = 0
+    if n_ord:
+        with _conn.cursor() as cur:
+            cur.execute(
+                "SELECT count(*) FROM ("
+                "  SELECT DISTINCT o.\"CEDULA_PROVEEDOR\" FROM fact_orden o"
+                "  WHERE o.\"CEDULA_PROVEEDOR\" IS NOT NULL AND o.\"CEDULA_PROVEEDOR\" <> ''"
+                "  AND NOT EXISTS (SELECT 1 FROM sicop_proveedores p"
+                "                  WHERE p.\"CEDULA_PROVEEDOR\" = o.\"CEDULA_PROVEEDOR\")"
+                ") t")
+            faltan = cur.fetchone()[0] or 0
     results["cedula_orden_en_proveedores"] = _test(corrida_id, "cedula_orden_en_proveedores",
                                                    faltan == 0, f"{faltan} ausentes / {n_ord}", "0")
 
-    # 5. len(codigo) en {16,24} en >=99.5%
+    # 5. len(codigo) en {16,24} en >=99.5% (agregado, sin iterator)
     malos = total_cod = 0
     for fact in (FactOferta, FactAdjudicacion, FactContratoLinea, FactRecepcion):
-        qs = fact.objects.exclude(CODIGO_CL__isnull=True).values_list("CODIGO_CL", flat=True)
-        for c in qs.iterator():
-            total_cod += 1
-            if len(c) not in (16, 24):
-                malos += 1
+        qs = fact.objects.exclude(CODIGO_CL__isnull=True)
+        for r in qs.values("CODIGO_CL").annotate(n=Count("id")):
+            total_cod += r["n"]
+            if len(r["CODIGO_CL"]) not in (16, 24):
+                malos += r["n"]
     pct = (100 - malos / total_cod * 100) if total_cod else 100
     results["len_codigo_16_24"] = _test(corrida_id, "len_codigo_16_24",
                                         pct >= 99.5, f"{pct:.2f}%", ">=99.5%")

@@ -1486,3 +1486,52 @@ class CorridaPaso(models.Model):
         ordering = ['corrida', 'id']
         indexes = [models.Index(fields=['corrida'])]
 
+
+class DimEntidad(models.Model):
+    """dim_entidad (FASE B): catalogo de entidades para resolucion por texto
+    libre. Proveedores e instituciones deduplicados por cedula con el nombre
+    mas frecuente, + alias curados (dim_alias_manual). El resolver la usa
+    para traducir 'la caja'/'marluvas' -> cedula con score de similitud."""
+    tipo = models.TextField()
+    cedula = models.TextField()
+    nombre = models.TextField()
+    nombre_norm = models.TextField()
+    alias = models.JSONField(default=list)
+    alias_norm = models.JSONField(default=list)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'dim_entidad'
+        constraints = [
+            models.UniqueConstraint(fields=['tipo', 'cedula'], name='dim_entidad_tipo_cedula_key'),
+        ]
+
+
+class CtlTrampa(models.Model):
+    """ctl_trampa (FASE B): las 18 trampas de datos de esquemas.json. El router
+    las consulta antes de responder (ej: 'codigo 16 vs 24', '5 monedas')."""
+    conjunto = models.TextField()
+    campo = models.TextField()
+    trampa = models.TextField()
+    cargado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ctl_trampa'
+        constraints = [
+            models.UniqueConstraint(fields=['conjunto', 'campo'], name='ctl_trampa_conjunto_campo_key'),
+        ]
+
+
+class CtlRetencion(models.Model):
+    """ctl_retencion (FASE R): auditoria del borrado anual por retencion movil."""
+    corrida = models.TextField()
+    anio = models.IntegerField()
+    dry_run = models.BooleanField(default=True)
+    total_filas = models.BigIntegerField(null=True, blank=True)
+    estado = models.TextField(blank=True, null=True)
+    detalle = models.TextField(blank=True, null=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ctl_retencion'
+

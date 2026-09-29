@@ -25,7 +25,32 @@ def wrap(value):
     value = to_plain(value)
     if isinstance(value, list):
         value = {"resultados": value, "total": len(value)}
+    _limpiar_internos(value)
     _etiquetar_labels(value)
+    return value
+
+
+# Campos internos de ingenieria que NO deben aparecer en una respuesta al
+# usuario (son ruido tecnico: hashes, corridas, marcadores de vigencia interna,
+# flags de pipeline). Se eliminan de todo dict que pase por wrap().
+_CAMPOS_INTERNOS = {
+    "id", "HASH_FILA", "CORRIDA_ID", "ES_VIGENTE", "OBSERVADO_DESDE",
+    "OBSERVADO_HASTA", "ES_OUTLIER", "CRC_CONVERTIDO_EN_RESPUESTA",
+    "ARCHIVO_ORIGEN", "MES_ZIP", "_claves",
+}
+
+
+def _limpiar_internos(value):
+    """Quita campos internos de ingenieria de cualquier dict (recursivo)."""
+    if isinstance(value, dict):
+        for k in list(value.keys()):
+            if k in _CAMPOS_INTERNOS:
+                del value[k]
+            else:
+                _limpiar_internos(value[k])
+    elif isinstance(value, list):
+        for it in value:
+            _limpiar_internos(it)
     return value
 
 
@@ -84,26 +109,60 @@ def _etiquetar_labels(value):
 mcp = MCPServer(
     "sicop",
     instructions=(
-        "Sistema de inteligencia sobre datos abiertos de contratacion publica de Costa Rica (SICOP, 2020-2026). "
-        "NIVEL DE MEDICION: toda cifra de negocio de un proveedor debe declarar si mide captacion "
-        "(adjudicaciones), ejecucion (ordenes de pedido) o entrega (recepciones). Consultar un proveedor "
-        "por captacion lo subestima hasta 59x frente a su ejecucion real. "
+        "Sistema de inteligencia sobre contratacion publica de Costa Rica (SICOP, 2020-2026). "
+        "VOS sos el cerebro: el usuario habla en lenguaje natural libre y coloquial ('las botas esas de "
+        "la electrica', 'que hay de calzado con el ICE', 'los muchachos de sondel que ganaron con la "
+        "caja'). INTERPRETA vos la intencion y las entidades; NO le pidas al usuario ser especifico. "
+        "Acepta alias y typos: ICE/la electrica/Instituto Costarricense de Electricidad = 4000042139; "
+        "la caja/CCSS/el seguro = 4000042147; sondel = 3101095926; marluvas = 3101111127; esosa = 3101086562. "
+        "MODELO DE DATOS (4 mediciones distintas, NO confundirlas): "
+        "1) CAPTACION = lo que una institucion ADJUDICO a un proveedor (fact_adjudicacion / sicop_adjudicaciones). "
+        "2) CARTEL/CONVOCATORIA = lo que una institucion PIDIO/convocó (fact_requerimiento, el concurso). "
+        "3) EJECUCION = ordenes de pedido contra el contrato (fact_orden / sicop_ordenes_proveedor). "
+        "4) ENTREGA = recepciones (fact_recepcion). "
+        "Consultar un proveedor por captacion lo subestima hasta 59x frente a su ejecucion real. "
+        "TRAMPA CRITICA: 'que licitacion/cartel saco/convocó X' = CARTEL (requerimiento), NO adjudicacion. "
+        "Un cartel reciente puede no tener adjudicacion aun (daria 0 en sicop_adjudicaciones aunque existe). "
+        "COMO ELEGIR LA TOOL (mapeo intencion -> herramienta): "
+        "- 'que licitaciones/carteles saco o convoco [institucion]' (con o sin producto, ej calzado/botas): "
+        "  usa sicop_preguntar con la pregunta tal cual; CONFIA en su respuesta (lista procedimientos 2026XE-...). "
+        "- 'donde participo/oferto/gano [proveedor]' (en tal institucion/anio): usa sicop_preguntar. "
+        "- ficha/negocio/cuanto gano un proveedor: sicop_ficha_proveedor. "
+        "- contra quien compite / mercado de una familia: sicop_grafo_competidores o sicop_mercado_familia. "
+        "- un procedimiento puntual (ej 2026XE-000001): sicop_expediente / sicop_verificar_procedimiento. "
+        "- precio/costo de un producto: sicop_producto_historia / sicop_precios_institucion. "
+        "El router sicop_preguntar entiende lenguaje coloquial y devuelve {intencion, entidades, procedimientos} "
+        "con nivel de medicion. Si su respuesta tiene procedimientos, ESA es la respuesta al usuario: "
+        "listalos con su numero (2026XE-...), fecha, institucion y lineas de ejemplo. NO re-verifiques con "
+        "sicop_adjudicaciones (medias otra cosa y concluis mal). "
+        "PRESENTACION: las tools devuelven datos estructurados con claves tecnicas (NRO_SICOP, "
+        "CEDULA_PROVEEDOR, ES_ADJUDICATARIO, lineas_cartel, etc.) que SON PARA VOS, no para el usuario. "
+        "Al responder, traduce a lenguaje natural: numero de licitacion legible, nombre de la institucion, "
+        "producto/linea, montos en CRC. NUNCA pegues claves crudas ni tags con guiones bajos en la respuesta "
+        "al usuario; arma una tabla o lista clara. "
+        "REGLA DE ORO (numeros de procedimiento): NUNCA inventes, completes, 'recuerdes' ni infieras un "
+        "numero de procedimiento (2020CD-..., 2026XE-...) NI lo atribuyas a un proveedor. Solo podes citar "
+        "numeros que una tool haya devuelto en ESTA conversacion; un numero sin tool que lo respalde es una "
+        "alucinacion. Para 'donde gano/participo X' usa sicop_adjudicaciones(cedula=..., institucion=...) y "
+        "cita SOLO sus filas; no mezcles procedimientos de otros proveedores. Si el numero no aparece, "
+        "pedilo con sicop_expediente / sicop_verificar_procedimiento; si aun asi no esta, deci que no esta "
+        "resuelto en la base. "
         "GESTION DEL SISTEMA: podes AUTO-GESTIONAR la base (diagnosticar, reparar, reconciliar). "
-        "Usa sicop_diagnostico para saber que necesita atencion, sicop_verificar_procedimiento para "
-        "revisar una licitacion especifica, sicop_reconciliar para hallar meses con huecos, y "
-        "sicop_reparar_mes para reparar un mes (re-extrae de la fuente, recarga Postgres, broncea, "
-        "reconstruye silver+gold y corre el gate). La ingesta es DETERMINISTA (el extractor lee los "
-        "ZIP oficiales); tu rol es diagnosticar y disparar reparaciones, NO editar datos crudos a mano "
-        "(el SQL libre esta bloqueado por enforcement). El ciclo diario 06:00/18:00 ya detecta y "
-        "reprocesa reescrituras de la fuente automaticamente."
+        "Usa sicop_diagnostico para ver que necesita atencion, sicop_verificar_procedimiento para una "
+        "licitacion especifica, sicop_reconciliar para huecos por mes, sicop_reparar_mes para reparar un mes. "
+        "La ingesta es DETERMINISTA (el extractor lee ZIP oficiales); NO edites datos crudos a mano. "
+        "El ciclo diario 06:00/18:00 detecta y reprocesa reescrituras de la fuente automaticamente."
     ),
 )
 
 
 @mcp.tool()
 def sicop_ficha_proveedor(cedula: str) -> dict:
-    """Ficha completa de un proveedor (por cedula, ej 3101029593): adjudicaciones por anio, cartera ejecucion vs captacion, desempeno de entrega y familias top."""
-    return wrap(queries.ficha_proveedor(cedula))
+    """Ficha completa de un proveedor (por cedula, ej 3101029593, o nombre/alias como 'marluvas'): adjudicaciones por anio, cartera ejecucion vs captacion, desempeno de entrega y familias top."""
+    ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
+    if not ced:
+        return {"error": f"no se pudo resolver '{cedula}' a un proveedor", "resultados": []}
+    return wrap(queries.ficha_proveedor(ced))
 
 
 @mcp.tool()
@@ -132,7 +191,7 @@ def sicop_expediente(nro_sicop: str) -> dict:
 
 @mcp.tool()
 def sicop_adjudicaciones(cedula: str = "", institucion: str = "", anio: str = "", nro_sicop: str = "", objeto_gasto: str = "", limit: int = 50) -> list:
-    """Lineas adjudicadas. Filtros opcionales por cedula de proveedor, cedula de institucion, anio (2020-2026), nro_sicop u objeto de gasto. Nivel: captacion."""
+    """Lineas ADJUDICADAS (nivel: captacion - lo que un proveedor GANO). NO sirve para buscar la licitacion/cartel que una institucion CONVOCO: si el cartel es reciente y aun no se adjudico, devuelve 0 aunque el cartel exista. Para 'que licitacion saco/convocó X' usa sicop_preguntar (busca carteles/requerimientos). Filtros: cedula de proveedor, institucion, anio (2020-2026), nro_sicop u objeto de gasto."""
     return wrap(queries.adjudicaciones(cedula, institucion, anio, nro_sicop, objeto_gasto, limit))
 
 
@@ -156,13 +215,19 @@ def sicop_representante_competencia(cedula_representante: str = "", limit: int =
 
 @mcp.tool()
 def sicop_excepciones(cedula: str = "", limit: int = 100) -> list:
-    """Procedimientos por excepcion (proveedor unico, emergencia, capacitacion) agrupados por adjudicatario."""
+    """Procedimientos por excepcion (proveedor unico, emergencia, capacitacion) agrupados por adjudicatario. Acepta cedula o nombre/alias."""
+    if cedula:
+        ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
+        cedula = ced or ""
     return wrap(queries.excepciones(cedula, limit))
 
 
 @mcp.tool()
 def sicop_sanciones(cedula: str = "") -> list:
-    """Sanciones a proveedores (inhabilitaciones/multas de procedimientos administrativos)."""
+    """Sanciones a proveedores (inhabilitaciones/multas de procedimientos administrativos). Acepta cedula o nombre/alias."""
+    if cedula:
+        ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
+        cedula = ced or ""
     return wrap(queries.sanciones(cedula))
 
 
@@ -180,8 +245,12 @@ def sicop_resumen() -> dict:
 
 @mcp.tool()
 def sicop_cara_a_cara(cedula_a: str, cedula_b: str, familia_unspsc: str = "") -> dict:
-    """Cara a cara de dos proveedores (plan: cara_a_cara): lineas donde ambos ofertaron, victorias, veces mas barato cada uno, familias compartidas y perfiles captacion/ejecucion."""
-    return wrap(queries.cara_a_cara(cedula_a, cedula_b, familia_unspsc or None))
+    """Cara a cara de dos proveedores (plan: cara_a_cara): lineas donde ambos ofertaron, victorias, veces mas barato cada uno, familias compartidas y perfiles captacion/ejecucion. Acepta cedulas o nombres/alias."""
+    a, _ = queries._resolver_cedula(cedula_a, tipos=["PROVEEDOR"])
+    b, _ = queries._resolver_cedula(cedula_b, tipos=["PROVEEDOR"])
+    if not a or not b:
+        return {"error": f"no se pudieron resolver '{cedula_a}' y/o '{cedula_b}'", "resultados": []}
+    return wrap(queries.cara_a_cara(a, b, familia_unspsc or None))
 
 
 @mcp.tool()
@@ -194,6 +263,68 @@ def sicop_producto_historia(codigo_cl: str) -> dict:
 def sicop_campo_buscar(termino: str, limit: int = 20) -> dict:
     """Busqueda por termino en el catalogo de productos (descripcion/marca/modelo), proveedores e instituciones (plan: campo_buscar)."""
     return wrap(queries.campo_buscar(termino, limit))
+
+
+@mcp.tool()
+def sicop_resolver(texto: str, limit: int = 5, tipos: str = "") -> dict:
+    """FASE B: resuelve texto libre -> entidades. Traduce nombres/alias/typos
+    a cedulas. Ejemplos: 'la caja'/'ccss' -> CCSS (4000042147), 'marluvas' ->
+    3101111127, 'sondel' -> 3101095926. Devuelve [{tipo, cedula, nombre, score, via}]."""
+    tipos_list = [t.strip().upper() for t in (tipos or "").split(",") if t.strip()]
+    if tipos_list and not any(t in ("PROVEEDOR", "INSTITUCION") for t in tipos_list):
+        tipos_list = None
+    return wrap(queries.resolver(texto, limit=limit, tipos=tipos_list))
+
+
+@mcp.tool()
+def sicop_buscar_productos(texto: str, limit: int = 10) -> dict:
+    """FASE C: busca productos del catalogo por SIGNIFICADO (embeddings), no por
+    texto exacto. Ej: 'bateria de respaldo para servidores' encuentra UPS aunque
+    ninguna fila contenga esa frase."""
+    return wrap(queries.buscar_productos_semantico(texto, limit))
+
+
+@mcp.tool()
+def sicop_kb_buscar(pregunta: str, limit: int = 5) -> dict:
+    """FASE C: busca en la base de conocimiento SICOP (08_kb, normativa) por
+    similitud semantica. Ej: 'por que el cartel habla en 16 digitos'."""
+    return wrap(queries.kb_buscar(pregunta, limit))
+
+
+@mcp.tool()
+def sicop_grafo_competidores(cedula: str, familia_unspsc: str = "", limit: int = 30) -> dict:
+    """FASE D: competidores de un proveedor en el GRAFO (aristas COMPITIO_CON).
+    Acepta cedula o nombre/alias. Con familia_unspsc (6 digitos) filtra a los que
+    compiten en esa familia y ordena por wins (quien gana mas). Ej: 'sondel',
+    familia '461816' -> ESOSA gana mas. Una query Cypher en ms."""
+    return wrap(queries.grafo_competidores(cedula, familia_unspsc or None, limit))
+
+
+@mcp.tool()
+def sicop_preguntar(pregunta: str) -> dict:
+    """FASE E: router de lenguaje natural. Empeza SIEMPRE por aca. Clasifica la
+    intencion (ficha de proveedor, mercado, competencia, procedimiento, precio,
+    specs, kb) y responde con la tool correcta, declarando el NIVEL DE MEDICION
+    y las trampas aplicables. Ej: 'cuantas licitaciones ha hecho la Caja',
+    'contra quien compite sondel en 461816 y quien gana mas'."""
+    return wrap(queries.preguntar(pregunta))
+
+
+@mcp.tool()
+def sicop_producto_specs(codigo_cl: str = "", descripcion: str = "", limit: int = 50) -> dict:
+    """Especificaciones tecnicas de un producto (gold_atributos_producto): por
+    CODIGO_PRODUCTO_CL (16 dig) o por descripcion/marca. Devuelve atributos
+    agrupados (dimension, peso, voltaje, potencia, color, etc.) con unidades.
+    Ej: sicop_producto_specs(descripcion='UPS')"""
+    return wrap(queries.producto_specs(codigo_cl, descripcion, limit))
+
+
+@mcp.tool()
+def sicop_integridad(tabla: str = "", mes: str = "", moneda: bool = False) -> dict:
+    """FASE §3.8: auditoria de integridad desde el esquema meta (paquete COMPLETO):
+    claves canonicas por tabla, censo mes-tabla, huecos por mes, subregistro de
+    monedas. Sin filtros devuelve el resumen. Ej: sicop_integridad(tabla='adjudicaciones')"""
+    return wrap(queries.integridad(tabla, mes, moneda))
 
 
 @mcp.tool()
@@ -213,7 +344,10 @@ def sicop_buscar_procedimiento(numero_procedimiento: str, limit: int = 20) -> di
 
 @mcp.tool()
 def sicop_perdidas_baratas(cedula: str = "", familia_unspsc: str = "", limit: int = 200) -> dict:
-    """Lineas donde un proveedor oferto MAS BARATO que el ganador y aun asi perdio (cola de revision, no conclusion)."""
+    """Lineas donde un proveedor oferto MAS BARATO que el ganador y aun asi perdio (cola de revision, no conclusion). Acepta cedula o nombre/alias."""
+    if cedula:
+        ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
+        cedula = ced or ""
     return wrap(queries.perdidas_baratas(cedula, familia_unspsc or None, limit))
 
 
@@ -231,8 +365,11 @@ def sicop_invitaciones_procedimiento(nro_sicop: str, limit: int = 500) -> dict:
 
 @mcp.tool()
 def sicop_invitaciones_proveedor(cedula: str, limit: int = 200) -> dict:
-    """Procedimientos donde un proveedor fue invitado (plan: invitaciones_pendientes)."""
-    return wrap(queries.invitaciones_proveedor(cedula, limit))
+    """Procedimientos donde un proveedor fue invitado (plan: invitaciones_pendientes). Acepta cedula o nombre/alias."""
+    ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
+    if not ced:
+        return {"error": f"no se pudo resolver '{cedula}'", "resultados": []}
+    return wrap(queries.invitaciones_proveedor(ced, limit))
 
 
 @mcp.tool()
@@ -249,14 +386,20 @@ def sicop_lineas_procedimiento(nro_sicop: str) -> dict:
 
 @mcp.tool()
 def sicop_proveedor_dim(cedula: str) -> dict:
-    """Registro del proveedor: tipo, tamano, zona, fechas de constitucion/expira."""
-    return wrap(queries.proveedor_dim(cedula))
+    """Registro del proveedor: tipo, tamano, zona, fechas de constitucion/expira. Acepta cedula o nombre/alias."""
+    ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
+    if not ced:
+        return {"error": f"no se pudo resolver '{cedula}'", "resultados": []}
+    return wrap(queries.proveedor_dim(ced))
 
 
 @mcp.tool()
-def sicop_ordenes_proveedor(cedula: str, anio: str = "", limit: int = 1000) -> dict:
-    """Ordenes de pedido de un proveedor (nivel EJECUCION, solo CRC sumable)."""
-    return wrap(queries.ordenes_proveedor(cedula, anio or None, limit))
+def sicop_ordenes_proveedor(cedula: str, anio: str = "", limit: int = 50) -> dict:
+    """Ordenes de pedido de un proveedor (nivel EJECUCION, solo CRC sumable). Devuelve TOTALES agregados + muestra de las ultimas `limit` ordenes (default 50; subi si necesitas mas). Acepta cedula o nombre/alias."""
+    ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
+    if not ced:
+        return {"error": f"no se pudo resolver '{cedula}'", "resultados": []}
+    return wrap(queries.ordenes_proveedor(ced, anio or None, limit))
 
 
 @mcp.tool()
@@ -749,27 +892,43 @@ def sicop_diagnostico() -> dict:
     actual = int(f"{hoy.year:04d}{hoy.month:02d}")
     meses_vacio = [v for v in range(202001, actual + 1) if 1 <= v % 100 <= 12 and str(v) not in con_datos]
 
-    # 4) recencia por tabla clave
+    # 4) recencia por tabla clave. Se EXCLUYE sicop_invitaciones (62M filas:
+    #    order_by sin indice = scan de 32s). Su recencia se infiere de
+    #    gold_invitaciones / sicop_resumen.
     recencia = {}
-    for tabla, campo in [("sicop_adjudicaciones", "MES_PUBLICACION"),
-                         ("sicop_ofertas", "MES_PUBLICACION"),
-                         ("sicop_ordenes_pedido", "MES_PUBLICACION"),
-                         ("sicop_invitaciones", "MES_PUBLICACION")]:
-        try:
-            from django.apps import apps
-            M = apps.get_model("sicop", {  # mapa nombre -> modelo
-                "sicop_adjudicaciones": "SicopAdjudicaciones",
-                "sicop_ofertas": "SicopOfertas",
-                "sicop_ordenes_pedido": "SicopOrdenesPedido",
-                "sicop_invitaciones": "SicopInvitaciones",
-            }[tabla])
+    try:
+        from django.apps import apps
+        for tabla, nombre in [("sicop_adjudicaciones", "SicopAdjudicaciones"),
+                              ("sicop_ofertas", "SicopOfertas"),
+                              ("sicop_ordenes_pedido", "SicopOrdenesPedido")]:
+            M = apps.get_model("sicop", nombre)
             mx = M.objects.filter(MES_PUBLICACION__isnull=False).order_by("-MES_PUBLICACION").values_list("MES_PUBLICACION", flat=True).first()
             recencia[tabla] = mx
-        except Exception:  # noqa: BLE001
-            recencia[tabla] = None
+        recencia["sicop_invitaciones"] = "(via gold_invitaciones; ver sicop_resumen)"
+    except Exception:  # noqa: BLE001
+        pass
 
     # 5) senales abiertas
     n_senales = Senal.objects.filter(estado="DETECTADA").count()
+
+    # 6) retencion anual: ultimo dry-run / proximo anio a borrar (FASE R)
+    retencion = None
+    try:
+        from sicop.models import CtlRetencion
+        ult = CtlRetencion.objects.order_by("-id").values(
+            "anio", "dry_run", "total_filas", "estado", "creado_en").first()
+        # proximo 1-ene: si estamos despues del 1-ene, el proximo es el anio
+        # siguiente; el borrado usa (anio_del_1ene - 7).
+        from datetime import datetime as _dt
+        hoy = _dt.now()
+        anio_del_1ene = hoy.year if hoy.month >= 2 else hoy.year - 1
+        retencion = {
+            "ultimo": ult,
+            "proximo_anio_a_borrar": anio_del_1ene - 7,
+            "proximo_1_enero": f"{anio_del_1ene}-01-01 04:30",
+        }
+    except Exception:  # noqa: BLE001
+        retencion = None
 
     return {
         "tests_fallidos": fails,
@@ -777,6 +936,7 @@ def sicop_diagnostico() -> dict:
         "meses_sin_lineas_cartel": meses_vacio,
         "recencia_max_mes": recencia,
         "senales_detectadas": n_senales,
+        "retencion_anual": retencion,
         "recomendacion": "correr sicop_reconciliar(solo_reporte=True) para HEAD a la fuente y confirmar huecos reales; luego sicop_reparar_mes para cada hueco",
     }
 
