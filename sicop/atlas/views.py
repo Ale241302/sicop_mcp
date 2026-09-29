@@ -433,11 +433,19 @@ def mcp_docs(request):
     import statistics
 
     bv = [v for v in bench.values() if v is not None]
+    if bench:
+        lenta = max(bench.items(), key=lambda kv: kv[1] or 0)
+        rapida = min(bench.items(), key=lambda kv: kv[1] if kv[1] is not None else 10**12)
+        mediana = int(statistics.median(bv)) if bv else None
+    else:
+        # benchmark aun no calculado (se computa en background): no romper la pagina
+        lenta = rapida = ("n/d", None)
+        mediana = None
     bench_stats = {
         "total": len(bench),
-        "mediana": int(statistics.median(bv)) if bv else None,
-        "lenta": max(bench.items(), key=lambda kv: kv[1] or 0),
-        "rapida": min(bench.items(), key=lambda kv: kv[1] if kv[1] is not None else 10**12),
+        "mediana": mediana,
+        "lenta": lenta,
+        "rapida": rapida,
         "lentas_2s": sum(1 for v in bv if v >= 2000),
     }
     bmax = max(bv) if bv else 1

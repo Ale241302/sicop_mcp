@@ -34,9 +34,9 @@ La respuesta trae el <code>mcp-session-id</code> en el header; usalo en las llam
 <div class="card">
 <div class="kpis">
   <div class="kpi"><div class="n">{{ bench_stats.total }}</div><div class="l">tools medidas</div></div>
-  <div class="kpi"><div class="n">{{ bench_stats.mediana }} ms</div><div class="l">mediana</div></div>
-  <div class="kpi"><div class="n ok">{{ bench_stats.rapida.1 }} ms</div><div class="l">más rápida · {{ bench_stats.rapida.0 }}</div></div>
-  <div class="kpi"><div class="n {% if bench_stats.lenta.1 >= 5000 %}bad{% elif bench_stats.lenta.1 >= 2000 %}wa{% endif %}">{{ bench_stats.lenta.1 }} ms</div><div class="l">más lenta · {{ bench_stats.lenta.0 }}</div></div>
+  <div class="kpi"><div class="n">{{ bench_stats.mediana|default:"n/d" }} ms</div><div class="l">mediana</div></div>
+  <div class="kpi"><div class="n ok">{{ bench_stats.rapida.1|default:"n/d" }} ms</div><div class="l">más rápida · {{ bench_stats.rapida.0 }}</div></div>
+  <div class="kpi"><div class="n {% if bench_stats.lenta.1 and bench_stats.lenta.1 >= 5000 %}bad{% elif bench_stats.lenta.1 and bench_stats.lenta.1 >= 2000 %}wa{% endif %}">{{ bench_stats.lenta.1|default:"n/d" }} ms</div><div class="l">más lenta · {{ bench_stats.lenta.0 }}</div></div>
 </div>
 <div class="bars">
 {% for t, ms, pct, cls in bench_bars %}
