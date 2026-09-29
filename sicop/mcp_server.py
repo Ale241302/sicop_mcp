@@ -436,12 +436,16 @@ def sicop_proveedor_dim(cedula: str) -> dict:
 
 
 @mcp.tool()
-def sicop_ordenes_proveedor(cedula: str, anio: str = "", limit: int = 0) -> dict:
-    """Ordenes de pedido de un proveedor (nivel EJECUCION, solo CRC sumable). Devuelve TOTALES agregados + muestra de las ultimas `limit` ordenes (default 50; subi si necesitas mas). Acepta cedula o nombre/alias."""
+def sicop_ordenes_proveedor(cedula: str, anio: str = "", institucion: str = "", limit: int = 0) -> dict:
+    """Ordenes de pedido de un proveedor (nivel EJECUCION, solo CRC sumable). TOTALES agregados + ordenes deduplicadas por NRO_ORDEN (no filas por linea). Acepta cedula o nombre/alias. Filtra por anio (elaboracion) y por institucion (cedula o nombre/alias; se resuelve via el procedimiento de la orden)."""
     ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
     if not ced:
         return {"error": f"no se pudo resolver '{cedula}'", "resultados": []}
-    return wrap(queries.ordenes_proveedor(ced, anio or None, limit))
+    inst = ""
+    if institucion:
+        inst, _ = queries._resolver_cedula(institucion, tipos=["INSTITUCION"])
+        inst = inst or institucion
+    return wrap(queries.ordenes_proveedor(ced, anio or None, limit, inst or None))
 
 
 @mcp.tool()
@@ -669,9 +673,10 @@ def sicop_fact_contrato(nro_contrato: str = "", nro_sicop: str = "", limit: int 
 
 
 @mcp.tool()
-def sicop_fact_orden(nro_orden: str = "", cedula: str = "", anio: str = "", nro_sicop: str = "", limit: int = 0, offset: int = 0) -> dict:
-    """Hecho de ejecucion: UNA fila por orden con TOTAL_ORDEN (solo CRC sumable). Nivel: EJECUCION. Filtra por nro_sicop si se pasa. limit=0 = SIN LIMITE. Devuelve total real y `truncado`."""
-    from sicop.models import FactOrden as M, SicopOrdenesPedido
+def sicop_fact_orden(nro_orden: str = "", cedula: str = "", anio: str = "", institucion: str = "", nro_sicop: str = "", limit: int = 0, offset: int = 0) -> dict:
+    """Hecho de ejecucion: UNA fila por orden con TOTAL_ORDEN_CRC (solo CRC sumable). Nivel: EJECUCION. Filtra por nro_sicop, anio e institucion (cedula o nombre/alias; se resuelve via el procedimiento de la orden). limit=0 = SIN LIMITE. Devuelve total real y `truncado`."""
+    from sicop.models import (FactOrden as M, SicopAdjudicaciones, SicopCarteles,
+                              SicopOrdenesPedido)
     from sicop.queries import to_plain
 
     qs = M.objects.all()
@@ -687,6 +692,16 @@ def sicop_fact_orden(nro_orden: str = "", cedula: str = "", anio: str = "", nro_
         qs = qs.filter(CEDULA_PROVEEDOR=cedula)
     if anio:
         qs = qs.filter(FECHA_ELABORACION__year=anio)
+    if institucion:
+        inst, _ = queries._resolver_cedula(institucion, tipos=["INSTITUCION"])
+        inst = inst or institucion
+        sicops = set(SicopCarteles.objects.filter(CEDULA_INSTITUCION=inst)
+                     .values_list("NRO_SICOP", flat=True).distinct())
+        sicops |= set(SicopAdjudicaciones.objects.filter(CEDULA=inst)
+                      .values_list("NRO_SICOP", flat=True).distinct())
+        nros_inst = list(SicopOrdenesPedido.objects.filter(NRO_SICOP__in=sicops)
+                         .values_list("NRO_ORDEN", flat=True).distinct()[:200000])
+        qs = qs.filter(NRO_ORDEN__in=nros_inst)
     rows, total, truncado = queries.pagina(
         qs.order_by("-FECHA_ELABORACION"), limit, offset)
     out = []

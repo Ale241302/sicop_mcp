@@ -1094,14 +1094,21 @@ def proveedor_dim(cedula):
     return to_plain(row)
 
 
-def ordenes_proveedor(cedula, anio=None, limit=1000):
+def ordenes_proveedor(cedula, anio=None, limit=1000, institucion=None):
     """Ordenes de pedido de un proveedor (nivel EJECUCION). Total CRC sumable;
-    monedas no CRC convertidas con el TC oficial del dia cuando esta disponible."""
-    from .models import SicopOrdenesPedido
+    monedas no CRC convertidas con el TC oficial del dia cuando esta disponible.
+    Filtra por anio (elaboracion) e institucion (via el procedimiento de la orden)."""
+    from .models import SicopAdjudicaciones, SicopCarteles, SicopOrdenesPedido
 
     qs = SicopOrdenesPedido.objects.filter(CEDULAPROVEEDOR=cedula)
     if anio:
         qs = qs.filter(FECHA_ELABORACION_ORDEN__year=anio)
+    if institucion:
+        sicops = set(SicopCarteles.objects.filter(CEDULA_INSTITUCION=institucion)
+                     .values_list("NRO_SICOP", flat=True).distinct())
+        sicops |= set(SicopAdjudicaciones.objects.filter(CEDULA=institucion)
+                      .values_list("NRO_SICOP", flat=True).distinct())
+        qs = qs.filter(NRO_SICOP__in=sicops)
     rows = list(qs.order_by("-FECHA_ELABORACION_ORDEN")[:limit or None])
     # TOTAL_ORDEN viene REPLICADO por linea: se deduplica por NRO_ORDEN (una orden
     # cuenta una vez) para no inflar ~3x ni contar lineas como si fueran ordenes.
@@ -1138,6 +1145,7 @@ def ordenes_proveedor(cedula, anio=None, limit=1000):
     return to_plain({
         "cedula": cedula,
         "anio": anio,
+        "institucion": institucion,
         "n_ordenes_muestra": len(ordenes_u),
         "n_filas_muestra": len(rows),
         "n_crc": n_crc,
