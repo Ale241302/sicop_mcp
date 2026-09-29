@@ -182,7 +182,7 @@ def resolver(texto, limit=5, tipos=None):
         where=["similarity(nombre_norm, %s) >= 0.35"],
         params=[t_norm],
         order_by=["-score"],
-    ).values("tipo", "cedula", "nombre", "score")[:limit])
+    ).values("tipo", "cedula", "nombre", "score")[:limit or None])
 
     # 3) ampliar con similitud sobre alias_norm (unnest)
     rows2 = list(qs.extra(
@@ -190,12 +190,12 @@ def resolver(texto, limit=5, tipos=None):
         select_params=[t_norm],
         where=["EXISTS (SELECT 1 FROM unnest(alias_norm) a WHERE similarity(a, %s) >= 0.35)"],
         params=[t_norm],
-    ).values("tipo", "cedula", "nombre", "score").order_by("-score")[:limit])
+    ).values("tipo", "cedula", "nombre", "score").order_by("-score")[:limit or None])
     seen = {(r["tipo"], r["cedula"]) for r in rows}
     rows += [r for r in rows2 if (r["tipo"], r["cedula"]) not in seen]
 
     out = []
-    for r in rows[:limit]:
+    for r in rows[:limit or None]:
         out.append({"tipo": r["tipo"], "cedula": r["cedula"],
                     "nombre": r["nombre"],
                     "score": round(float(r.get("score") or 0), 3), "via": "similitud"})
@@ -583,25 +583,25 @@ def carteles_objetados(institucion=None, limit=100):
     qs = GoldCartelesObjetados.objects.all()
     if institucion:
         qs = qs.filter(CEDULA_INSTITUCION=institucion)
-    return to_plain(list(qs.order_by("-MONTO_EST")[:limit]))
+    return to_plain(list(qs.order_by("-MONTO_EST")[:limit or None]))
 
 
 def representantes(limit=50):
-    return to_plain(list(GoldRepresentanteEmpresas.objects.order_by("-N_ADJUDICACIONES")[:limit]))
+    return to_plain(list(GoldRepresentanteEmpresas.objects.order_by("-N_ADJUDICACIONES")[:limit or None]))
 
 
 def representante_competencia(cedula_representante=None, limit=100):
     qs = GoldRepresentanteCompetencia.objects.all()
     if cedula_representante:
         qs = qs.filter(CEDULA_REPRESENTANTE=cedula_representante)
-    return to_plain(list(qs.order_by("-N_OFERENTES_TOTAL")[:limit]))
+    return to_plain(list(qs.order_by("-N_OFERENTES_TOTAL")[:limit or None]))
 
 
 def excepciones(cedula=None, limit=100):
     qs = GoldExcepcionesPorAdjudicatario.objects.all()
     if cedula:
         qs = qs.filter(CEDULA_PROVEEDOR=cedula)
-    return to_plain(list(qs.order_by("-MONTO_CRC")[:limit]))
+    return to_plain(list(qs.order_by("-MONTO_CRC")[:limit or None]))
 
 
 def sanciones(cedula=None):
@@ -619,7 +619,7 @@ def precios_institucion(familia=None, marca=None, anio=None, limit=100):
         qs = qs.filter(MARCA__icontains=marca)
     if anio:
         qs = qs.filter(ANIO=str(anio))
-    return to_plain(list(qs.order_by("-RATIO_MAX_MIN")[:limit]))
+    return to_plain(list(qs.order_by("-RATIO_MAX_MIN")[:limit or None]))
 
 
 # ---- sobre (envelope) requerido por el plan §5.4 ----
@@ -837,7 +837,7 @@ def campo_buscar(termino, limit=20):
         .filter(prov_norm__contains=termino_norm)
         .values("CEDULA_PROVEEDOR", "NOMBRE_PROVEEDOR")
         .annotate(lineas=Count("id"), monto_crc=Sum("MONTO_ADJU_LINEA_CRC"))
-        .order_by("-monto_crc")[:limit]
+        .order_by("-monto_crc")[:limit or None]
     )
     inst = (
         SicopAdjudicaciones.objects.annotate(
@@ -846,14 +846,14 @@ def campo_buscar(termino, limit=20):
         .filter(inst_norm__contains=termino_norm)
         .values("CEDULA", "INSTITUCION")
         .annotate(lineas=Count("id"), monto_crc=Sum("MONTO_ADJU_LINEA_CRC"))
-        .order_by("-monto_crc")[:limit]
+        .order_by("-monto_crc")[:limit or None]
     )
     productos = list(
         GoldCatalogoProductos.objects.annotate(
             desc_norm=Func("DESCRIPCION", function="f_norm")
         )
         .filter(desc_norm__contains=termino_norm)
-        .order_by("-LINEAS_EJECUCION")[:limit]
+        .order_by("-LINEAS_EJECUCION")[:limit or None]
     )
     return to_plain({
         "termino": termino,
@@ -901,7 +901,7 @@ def perdidas_baratas(cedula=None, familia=None, limit=200):
                 })
     out.sort(key=lambda x: -x["delta_vs_ganador_pct"])
     return {
-        "perdidas_baratas": out[:limit],
+        "perdidas_baratas": out[:limit or None],
         "total": len(out),
         "sobre": sobre("captacion (ofertas x adjudicaciones)", COBERTURA_CRUCE,
                        extra=["cola de revision, no conclusion: el motivo vive en el acta de estudio tecnico"]),
@@ -1065,7 +1065,7 @@ def ordenes_proveedor(cedula, anio=None, limit=1000):
     qs = SicopOrdenesPedido.objects.filter(CEDULAPROVEEDOR=cedula)
     if anio:
         qs = qs.filter(FECHA_ELABORACION_ORDEN__year=anio)
-    rows = list(qs.order_by("-FECHA_ELABORACION_ORDEN")[:limit])
+    rows = list(qs.order_by("-FECHA_ELABORACION_ORDEN")[:limit or None])
     tc_dia = _tc_del_dia()
     n_crc = sum(1 for r in rows if r.MONEDA_ORDEN == "CRC")
     otras = [r for r in rows if (r.MONEDA_ORDEN or "") not in ("", "CRC")]
@@ -1179,7 +1179,7 @@ def buscar_productos_semantico(texto, limit=10):
         ranked = [{"codigo_cl": c, "texto": t, "sim": s,
                    "score": round(_score(t, s), 3)} for c, (t, s) in pool.items()]
         ranked.sort(key=lambda r: -r["score"])
-        return to_plain({"texto": texto, "resultados": ranked[:limit]})
+        return to_plain({"texto": texto, "resultados": ranked[:limit or None]})
 
 
 def kb_buscar(pregunta, limit=5):
@@ -1190,6 +1190,7 @@ def kb_buscar(pregunta, limit=5):
     if not vec:
         return {"error": "no se pudo embeber (embedder caido)", "resultados": []}
     vec_str = "[" + ",".join(f"{x:.6f}" for x in vec) + "]"
+    limite = int(limit) if limit and int(limit) > 0 else 100000
     sql = """
         SELECT e.ref_id, e.texto, 1 - (e.embedding <=> %s::vector) AS sim
         FROM emb_doc e
@@ -1198,7 +1199,7 @@ def kb_buscar(pregunta, limit=5):
         LIMIT %s
     """
     with connection.cursor() as cur:
-        cur.execute(sql, [vec_str, vec_str, limit])
+        cur.execute(sql, [vec_str, vec_str, limite])
         cols = [c[0] for c in cur.description]
         return to_plain({"pregunta": pregunta, "resultados": [dict(zip(cols, r)) for r in cur.fetchall()]})
 
@@ -1245,6 +1246,7 @@ def grafo_competidores(cedula, familia=None, limit=30):
     ced, _ = _resolver_cedula(cedula, tipos=["PROVEEDOR"])
     if not ced:
         return {"error": f"no se pudo resolver '{cedula}'", "competidores": []}
+    lim = int(limit) if limit and int(limit) > 0 else 100000
     if familia:
         fam = str(familia)[:6]
         q = (
@@ -1252,13 +1254,13 @@ def grafo_competidores(cedula, familia=None, limit=30):
             f"MATCH (o:Proveedor)-[r:COMPITE_EN]->(f) "
             f"WHERE o <> p "
             f"RETURN {{competidor: o.cedula, n_lineas: r.n_lineas, wins: r.wins, monto_crc: r.monto_crc}} "
-            f"ORDER BY r.wins DESC LIMIT {int(limit)}"
+            f"ORDER BY r.wins DESC LIMIT {lim}"
         )
         return {"cedula": ced, "familia": fam, "competidores": [_ag_to_py(r) for r in _cypher(q)]}
     rows = _cypher(
         f"MATCH (p:Proveedor {{cedula: '{ced}'}})-[r:COMPITIO_CON]-(o) "
         f"RETURN {{competidor: o.cedula, n_lineas: r.n_lineas, wins_a: r.wins_a, wins_b: r.wins_b}} "
-        f"ORDER BY r.n_lineas DESC LIMIT {int(limit)}"
+        f"ORDER BY r.n_lineas DESC LIMIT {lim}"
     )
     return {"cedula": ced, "competidores": [_ag_to_py(r) for r in rows]}
 
@@ -1706,7 +1708,7 @@ def _anio_consulta(texto, ner):
 
 
 def procedimientos_buscar(institucion=None, proveedor=None, termino=None,
-                          anio=None, limit=10):
+                          anio=None, limit=0):
     """Busca licitaciones/procedimientos por institucion + termino de producto
     (calzado, UPS, etc.) y/o por proveedor participante. Cruza sicop_carteles
     (quien compro) con fact_requerimiento (lo que se pidio, DESC_LINEA) y con
@@ -1808,7 +1810,6 @@ def procedimientos_buscar(institucion=None, proveedor=None, termino=None,
                   AND (%s::text IS NULL OR left(c."MES_PUBLICACION", 4) = %s)
                   {sel_prov}
                 ORDER BY c."MES_PUBLICACION" DESC, c."NRO_SICOP" DESC
-                LIMIT 2500
             ),
             dedup AS (
                 SELECT DISTINCT ON (nro_sicop) *
@@ -1884,7 +1885,8 @@ def procedimientos_buscar(institucion=None, proveedor=None, termino=None,
         if grupos:
             params += [termino]
             params += params_rm
-        params += [prov_ced, prov_ced, limit]
+        lim = int(limit) if limit and int(limit) > 0 else 100000
+        params += [prov_ced, prov_ced, lim]
         with connection.cursor() as cur:
             cur.execute(sql_final, params)
             cols = [c[0] for c in cur.description]

@@ -199,25 +199,25 @@ def sicop_adjudicaciones(cedula: str = "", institucion: str = "", anio: str = ""
 
 
 @mcp.tool()
-def sicop_carteles_objetados(institucion: str = "", limit: int = 100) -> list:
+def sicop_carteles_objetados(institucion: str = "", limit: int = 0) -> list:
     """Carteles objetados (cola de revision): monto estimado, institucion, si se adjudico despues."""
     return wrap(queries.carteles_objetados(institucion, limit))
 
 
 @mcp.tool()
-def sicop_representantes(limit: int = 50) -> list:
+def sicop_representantes(limit: int = 0) -> list:
     """Representantes legales con 2+ empresas adjudicatarias, monto total y familias."""
     return wrap(queries.representantes(limit))
 
 
 @mcp.tool()
-def sicop_representante_competencia(cedula_representante: str = "", limit: int = 100) -> list:
+def sicop_representante_competencia(cedula_representante: str = "", limit: int = 0) -> list:
     """Lineas donde 2+ oferentes comparten representante legal (cola de revision, no conclusion)."""
     return wrap(queries.representante_competencia(cedula_representante, limit))
 
 
 @mcp.tool()
-def sicop_excepciones(cedula: str = "", limit: int = 100) -> list:
+def sicop_excepciones(cedula: str = "", limit: int = 0) -> list:
     """Procedimientos por excepcion (proveedor unico, emergencia, capacitacion) agrupados por adjudicatario. Acepta cedula o nombre/alias."""
     if cedula:
         ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
@@ -235,7 +235,7 @@ def sicop_sanciones(cedula: str = "") -> list:
 
 
 @mcp.tool()
-def sicop_precios_institucion(familia_unspsc: str = "", marca: str = "", anio: str = "", limit: int = 100) -> list:
+def sicop_precios_institucion(familia_unspsc: str = "", marca: str = "", anio: str = "", limit: int = 0) -> list:
     """Quien paga de mas por el mismo producto (marca+modelo+firma+anio): ratio max/min entre instituciones."""
     return wrap(queries.precios_institucion(familia_unspsc, marca, anio, limit))
 
@@ -263,13 +263,13 @@ def sicop_producto_historia(codigo_cl: str) -> dict:
 
 
 @mcp.tool()
-def sicop_campo_buscar(termino: str, limit: int = 20) -> dict:
+def sicop_campo_buscar(termino: str, limit: int = 0) -> dict:
     """Busqueda por termino en el catalogo de productos (descripcion/marca/modelo), proveedores e instituciones (plan: campo_buscar)."""
     return wrap(queries.campo_buscar(termino, limit))
 
 
 @mcp.tool()
-def sicop_resolver(texto: str, limit: int = 5, tipos: str = "") -> dict:
+def sicop_resolver(texto: str, limit: int = 0, tipos: str = "") -> dict:
     """FASE B: resuelve texto libre -> entidades. Traduce nombres/alias/typos
     a cedulas. Ejemplos: 'la caja'/'ccss' -> CCSS (4000042147), 'marluvas' ->
     3101111127, 'sondel' -> 3101095926. Devuelve [{tipo, cedula, nombre, score, via}]."""
@@ -280,7 +280,7 @@ def sicop_resolver(texto: str, limit: int = 5, tipos: str = "") -> dict:
 
 
 @mcp.tool()
-def sicop_buscar_productos(texto: str, limit: int = 10) -> dict:
+def sicop_buscar_productos(texto: str, limit: int = 0) -> dict:
     """FASE C: busca productos del catalogo por SIGNIFICADO (embeddings), no por
     texto exacto. Ej: 'bateria de respaldo para servidores' encuentra UPS aunque
     ninguna fila contenga esa frase."""
@@ -288,14 +288,14 @@ def sicop_buscar_productos(texto: str, limit: int = 10) -> dict:
 
 
 @mcp.tool()
-def sicop_kb_buscar(pregunta: str, limit: int = 5) -> dict:
+def sicop_kb_buscar(pregunta: str, limit: int = 0) -> dict:
     """FASE C: busca en la base de conocimiento SICOP (08_kb, normativa) por
     similitud semantica. Ej: 'por que el cartel habla en 16 digitos'."""
     return wrap(queries.kb_buscar(pregunta, limit))
 
 
 @mcp.tool()
-def sicop_grafo_competidores(cedula: str, familia_unspsc: str = "", limit: int = 30) -> dict:
+def sicop_grafo_competidores(cedula: str, familia_unspsc: str = "", limit: int = 0) -> dict:
     """FASE D: competidores de un proveedor en el GRAFO (aristas COMPITIO_CON).
     Acepta cedula o nombre/alias. Con familia_unspsc (6 digitos) filtra a los que
     compiten en esa familia y ordena por wins (quien gana mas). Ej: 'sondel',
@@ -314,7 +314,7 @@ def sicop_preguntar(pregunta: str) -> dict:
 
 
 @mcp.tool()
-def sicop_producto_specs(codigo_cl: str = "", descripcion: str = "", limit: int = 50) -> dict:
+def sicop_producto_specs(codigo_cl: str = "", descripcion: str = "", limit: int = 0) -> dict:
     """Especificaciones tecnicas de un producto (gold_atributos_producto): por
     CODIGO_PRODUCTO_CL (16 dig) o por descripcion/marca. Devuelve atributos
     agrupados (dimension, peso, voltaje, potencia, color, etc.) con unidades.
@@ -331,7 +331,7 @@ def sicop_integridad(tabla: str = "", mes: str = "", moneda: bool = False) -> di
 
 
 @mcp.tool()
-def sicop_buscar_procedimiento(numero_procedimiento: str, limit: int = 20) -> dict:
+def sicop_buscar_procedimiento(numero_procedimiento: str, limit: int = 0) -> dict:
     """Traduce el numero humano del procedimiento (ej '2023LE-000016-0000200001', el que sale en carteles y correos) al NRO_SICOP canonico."""
     from sicop.models import SicopCarteles
 
@@ -340,13 +340,13 @@ def sicop_buscar_procedimiento(numero_procedimiento: str, limit: int = 20) -> di
         return {"resultados": [], "total": 0}
     qs = SicopCarteles.objects.filter(NRO_PROCEDIMIENTO__icontains=q)
     rows = list(qs.values("NRO_SICOP", "NRO_PROCEDIMIENTO", "CEDULA_INSTITUCION",
-                          "TIPO_PROCEDIMIENTO", "FECHA_PUBLICACION", "MONTO_EST")[:limit])
+                          "TIPO_PROCEDIMIENTO", "FECHA_PUBLICACION", "MONTO_EST")[:limit or None])
     return {"resultados": rows, "total": len(rows),
             "nota": "una vez tengas el NRO_SICOP, usalo con sicop_verificar_procedimiento / sicop_expediente / sicop_competencia_procedimiento"}
 
 
 @mcp.tool()
-def sicop_perdidas_baratas(cedula: str = "", familia_unspsc: str = "", limit: int = 200) -> dict:
+def sicop_perdidas_baratas(cedula: str = "", familia_unspsc: str = "", limit: int = 0) -> dict:
     """Lineas donde un proveedor oferto MAS BARATO que el ganador y aun asi perdio (cola de revision, no conclusion). Acepta cedula o nombre/alias."""
     if cedula:
         ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
@@ -367,7 +367,7 @@ def sicop_invitaciones_procedimiento(nro_sicop: str, limit: int = 0, offset: int
 
 
 @mcp.tool()
-def sicop_invitaciones_proveedor(cedula: str, institucion: str = "", anio: str = "", limit: int = 200) -> dict:
+def sicop_invitaciones_proveedor(cedula: str, institucion: str = "", anio: str = "", limit: int = 0) -> dict:
     """Procedimientos donde un proveedor fue invitado (invitacion != participacion). Acepta cedula o nombre/alias. Filtra por institucion (cedula o nombre/alias) y anio (publicacion del procedimiento). Devuelve el total REAL y `truncado`; si truncado=True hay mas de las devueltas."""
     ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
     if not ced:
@@ -401,7 +401,7 @@ def sicop_proveedor_dim(cedula: str) -> dict:
 
 
 @mcp.tool()
-def sicop_ordenes_proveedor(cedula: str, anio: str = "", limit: int = 50) -> dict:
+def sicop_ordenes_proveedor(cedula: str, anio: str = "", limit: int = 0) -> dict:
     """Ordenes de pedido de un proveedor (nivel EJECUCION, solo CRC sumable). Devuelve TOTALES agregados + muestra de las ultimas `limit` ordenes (default 50; subi si necesitas mas). Acepta cedula o nombre/alias."""
     ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
     if not ced:
@@ -416,7 +416,7 @@ def sicop_recursos_procedimiento(nro_sicop: str) -> dict:
 
 
 @mcp.tool()
-def sicop_recursos_desenlace(nro_sicop: str = "", cedula: str = "", limit: int = 200) -> dict:
+def sicop_recursos_desenlace(nro_sicop: str = "", cedula: str = "", limit: int = 0) -> dict:
     """Recursos de objecion con desenlace (recurrente, resultado, PROSPERO, institucion)."""
     from sicop.models import GoldRecursosDesenlace as M
 
@@ -425,11 +425,11 @@ def sicop_recursos_desenlace(nro_sicop: str = "", cedula: str = "", limit: int =
         qs = qs.filter(NRO_SICOP=nro_sicop)
     if cedula:
         qs = qs.filter(CEDULA_PROVEEDOR=cedula)
-    return wrap(list(qs.order_by("-FECHA_PRESENTACION_RECURSO")[:limit]))
+    return wrap(list(qs.order_by("-FECHA_PRESENTACION_RECURSO")[:limit or None]))
 
 
 @mcp.tool()
-def sicop_tiempos_por_etapa(nro_sicop: str = "", limit: int = 200) -> dict:
+def sicop_tiempos_por_etapa(nro_sicop: str = "", limit: int = 0) -> dict:
     """Plazos reales entre etapas por procedimiento (dias). Una fila por procedimiento (deduplicada)."""
     from sicop.models import GoldTiemposPorEtapa as M
 
@@ -452,18 +452,18 @@ def sicop_tiempos_por_etapa(nro_sicop: str = "", limit: int = 200) -> dict:
 
 
 @mcp.tool()
-def sicop_precios_identicos(nro_sicop: str = "", limit: int = 200) -> dict:
+def sicop_precios_identicos(nro_sicop: str = "", limit: int = 0) -> dict:
     """Lineas con 2+ oferentes al mismo precio exacto (cola de revision, no conclusion)."""
     from sicop.models import GoldPreciosIdenticos as M
 
     qs = M.objects.all()
     if nro_sicop:
         qs = qs.filter(NRO_SICOP=nro_sicop)
-    return wrap(list(qs.order_by("-REPETICION_PAR")[:limit]))
+    return wrap(list(qs.order_by("-REPETICION_PAR")[:limit or None]))
 
 
 @mcp.tool()
-def sicop_producto_firma(codigo_cl: str = "", marca: str = "", limit: int = 100) -> dict:
+def sicop_producto_firma(codigo_cl: str = "", marca: str = "", limit: int = 0) -> dict:
     """Firma de SKU (CL + marca + modelo + atributos) de un producto del catalogo."""
     from sicop.models import GoldProductoFirma as M
 
@@ -472,29 +472,29 @@ def sicop_producto_firma(codigo_cl: str = "", marca: str = "", limit: int = 100)
         qs = qs.filter(CODIGO_PRODUCTO_CL=codigo_cl)
     if marca:
         qs = qs.filter(MARCA__icontains=marca)
-    return wrap(list(qs[:limit]))
+    return wrap(list(qs[:limit or None]))
 
 
 @mcp.tool()
-def sicop_invitados_vs_ofertantes(nro_sicop: str = "", limit: int = 200) -> dict:
+def sicop_invitados_vs_ofertantes(nro_sicop: str = "", limit: int = 0) -> dict:
     """Direccionamiento ex-ante: invitados vs ofertantes por procedimiento (tasa de respuesta)."""
     from sicop.models import GoldInvitadosVsOfertantes as M
 
     qs = M.objects.all()
     if nro_sicop:
         qs = qs.filter(NRO_SICOP=nro_sicop)
-    return wrap(list(qs.order_by("NRO_SICOP")[:limit]))
+    return wrap(list(qs.order_by("NRO_SICOP")[:limit or None]))
 
 
 @mcp.tool()
-def sicop_regimen(nro_sicop: str = "", limit: int = 200) -> dict:
+def sicop_regimen(nro_sicop: str = "", limit: int = 0) -> dict:
     """Regimen de evaluacion normalizado por procedimiento (PRECIO_PURO / MIXTO / SIN_PRECIO) con factores y pesos."""
     from sicop.models import GoldRegimenEvaluacion as M
 
     qs = M.objects.all()
     if nro_sicop:
         qs = qs.filter(NRO_SICOP=nro_sicop)
-    return wrap(list(qs.order_by("NRO_SICOP")[:limit]))
+    return wrap(list(qs.order_by("NRO_SICOP")[:limit or None]))
 
 
 @mcp.tool()
@@ -506,7 +506,7 @@ def sicop_competencia_por_regimen() -> dict:
 
 
 @mcp.tool()
-def sicop_ctl_deriva(conjunto: str = "", campo: str = "", anio: str = "", limit: int = 500) -> dict:
+def sicop_ctl_deriva(conjunto: str = "", campo: str = "", anio: str = "", limit: int = 0) -> dict:
     """Mapa de deriva de esquema por anio: presente y llenado de cada campo (plan Fase 0.2). Regla: ninguna serie multianual se publica sin declarar sus huecos."""
     from sicop.models import CtlDeriva as M
 
@@ -517,11 +517,11 @@ def sicop_ctl_deriva(conjunto: str = "", campo: str = "", anio: str = "", limit:
         qs = qs.filter(CAMPO=campo)
     if anio:
         qs = qs.filter(ANIO=anio)
-    return wrap(list(qs.order_by("CONJUNTO", "ANIO", "CAMPO")[:limit]))
+    return wrap(list(qs.order_by("CONJUNTO", "ANIO", "CAMPO")[:limit or None]))
 
 
 @mcp.tool()
-def sicop_catalogo_campo(tabla: str = "", campo: str = "", limit: int = 500) -> dict:
+def sicop_catalogo_campo(tabla: str = "", campo: str = "", limit: int = 0) -> dict:
     """Diccionario de datos navegable: tipo, llenado, clave, trampa, unidad y regla de join por campo (FASE 1)."""
     from sicop.models import CatalogoCampo as M
 
@@ -530,11 +530,11 @@ def sicop_catalogo_campo(tabla: str = "", campo: str = "", limit: int = 500) -> 
         qs = qs.filter(TABLA__icontains=tabla)
     if campo:
         qs = qs.filter(CAMPO__icontains=campo)
-    return wrap(list(qs.order_by("TABLA", "CAMPO")[:limit]))
+    return wrap(list(qs.order_by("TABLA", "CAMPO")[:limit or None]))
 
 
 @mcp.tool()
-def sicop_mes_publicacion(mes: str = "", nro_sicop: str = "", desfasados: bool = False, limit: int = 100) -> dict:
+def sicop_mes_publicacion(mes: str = "", nro_sicop: str = "", desfasados: bool = False, limit: int = 0) -> dict:
     """Mes de publicacion REAL por procedimiento (derivado de FECHA_PUBLICACION del cartel).
     MES_PUBLICACION de las tablas crudas es el primer zip donde el extractor vio la fila (trampa:
     ~21% desfasados). Con mes='YYYYMM' devuelve los procedimientos publicados ESE mes (serie temporal
@@ -548,7 +548,7 @@ def sicop_mes_publicacion(mes: str = "", nro_sicop: str = "", desfasados: bool =
         qs = qs.filter(MES_REAL=mes)
     if desfasados:
         qs = qs.filter(DESFASADO="S")
-    return wrap(list(qs.order_by("NRO_SICOP")[:limit]))
+    return wrap(list(qs.order_by("NRO_SICOP")[:limit or None]))
 
 
 @mcp.tool()
@@ -696,7 +696,7 @@ def sicop_gold_status(corrida: str = "") -> dict:
 # ---- FASE 2: ciclo diario, resultado_decision, senales, vigilancia ----
 
 @mcp.tool()
-def sicop_resultado(nro_sicop: str = "", estado: str = "", limit: int = 100) -> dict:
+def sicop_resultado(nro_sicop: str = "", estado: str = "", limit: int = 0) -> dict:
     """Decisiones registradas (SCH_RESULTADO): grano (nro_sicop, nro_linea, decision_id)."""
     from sicop.models import ResultadoDecision as M
 
@@ -705,7 +705,7 @@ def sicop_resultado(nro_sicop: str = "", estado: str = "", limit: int = 100) -> 
         qs = qs.filter(nro_sicop=nro_sicop)
     if estado:
         qs = qs.filter(estado_resultado=estado)
-    return wrap(list(qs.order_by("-fecha_decision")[:limit]))
+    return wrap(list(qs.order_by("-fecha_decision")[:limit or None]))
 
 
 @mcp.tool()
@@ -737,26 +737,26 @@ def sicop_registrar_resultado(nro_sicop: str, nro_linea: str, decision: str,
 
 
 @mcp.tool()
-def sicop_senales(estado: str = "", limit: int = 100) -> dict:
+def sicop_senales(estado: str = "", limit: int = 0) -> dict:
     """Cola de senales del dia (watchlist): tipo, prioridad, nro_sicop, evidencia."""
     from sicop.models import Senal as M
 
     qs = M.objects.all()
     if estado:
         qs = qs.filter(estado=estado)
-    return wrap(list(qs.order_by("-fecha")[:limit]))
+    return wrap(list(qs.order_by("-fecha")[:limit or None]))
 
 
 @mcp.tool()
-def sicop_vigilancia(limit: int = 50) -> dict:
+def sicop_vigilancia(limit: int = 0) -> dict:
     """Ultimos chequeos de reescritura de la fuente (meses objetivo)."""
     from sicop.models import VigilanciaCheck as M
 
-    return wrap(list(M.objects.order_by("-fecha")[:limit]))
+    return wrap(list(M.objects.order_by("-fecha")[:limit or None]))
 
 
 @mcp.tool()
-def sicop_corrida_pasos(corrida: str = "", limit: int = 100) -> dict:
+def sicop_corrida_pasos(corrida: str = "", limit: int = 0) -> dict:
     """Log estructurado del pipeline por corrida (tc_dia, vigilancia, extractor,
     recarga, silver, gold, tests) con estado, detalle, filas y duracion. Sin
     corrida devuelve los ultimos pasos de todas las corridas."""
@@ -765,7 +765,7 @@ def sicop_corrida_pasos(corrida: str = "", limit: int = 100) -> dict:
     qs = M.objects.all()
     if corrida:
         qs = qs.filter(corrida=corrida)
-    return wrap(list(qs.order_by("-id")[:limit]))
+    return wrap(list(qs.order_by("-id")[:limit or None]))
 
 
 @mcp.tool()
@@ -985,15 +985,15 @@ def sicop_politica() -> dict:
 
 
 @mcp.tool()
-def sicop_registro(limit: int = 50) -> dict:
+def sicop_registro(limit: int = 0) -> dict:
     """Auditoria de respuestas: agente, herramienta, params, build_id, conteo, carril."""
     from sicop.models import RegistroRespuesta as M
 
-    return wrap(list(M.objects.order_by("-timestamp")[:limit]))
+    return wrap(list(M.objects.order_by("-timestamp")[:limit or None]))
 
 
 @mcp.tool()
-def sicop_actividad_mcp(horas: int = 24, herramienta: str = "", limit: int = 30) -> dict:
+def sicop_actividad_mcp(horas: int = 24, herramienta: str = "", limit: int = 0) -> dict:
     """Actividad reciente del MCP: quien pidio que (agente), por hora, tools top y las ultimas llamadas. Para monitorear el uso desde claude.ai u otros clientes MCP."""
     from datetime import timedelta
 
@@ -1022,7 +1022,7 @@ def sicop_actividad_mcp(horas: int = 24, herramienta: str = "", limit: int = 30)
             qs.values("herramienta").annotate(n=Count("id")).order_by("-n")[:12]
         ),
         "agentes_top": list(qs.values("agente").annotate(n=Count("id")).order_by("-n")[:12]),
-        "ultimas": wrap(list(qs.order_by("-timestamp")[:limit])),
+        "ultimas": wrap(list(qs.order_by("-timestamp")[:limit or None])),
     }
 
 
@@ -1097,7 +1097,7 @@ def sicop_pendientes(solo: str = "") -> dict:
 
 
 @mcp.tool()
-def sicop_cgr_buscar(termino: str, page: int = 1, limit: int = 15) -> dict:
+def sicop_cgr_buscar(termino: str, page: int = 1, limit: int = 0) -> dict:
     """Buscador CGR: PDFs de resoluciones por termino (ej. un NRO_SICOP). USO DIRIGIDO, no barrido; gate legal pendiente."""
     from sicop.cgr import buscar
 
