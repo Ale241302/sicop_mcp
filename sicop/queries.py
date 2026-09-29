@@ -422,18 +422,39 @@ def mercado_familia(familia):
 
 
 def competencia_procedimiento(nro_sicop):
-    rows = GoldCompetenciaPorLinea.objects.filter(NRO_SICOP=nro_sicop).order_by("NRO_LINEA")
-    data = list(rows)
-    adj = [r for r in data if r.ES_ADJUDICATARIO == "S"]
+    data = to_plain(list(
+        GoldCompetenciaPorLinea.objects.filter(NRO_SICOP=nro_sicop).order_by("NRO_LINEA")))
+    # precio minimo por linea (1 CRC de tolerancia) -> marca quien fue el mas barato
+    minimos = {}
+    for r in data:
+        v = r.get("PRECIO_UNITARIO_CRC")
+        ln = str(r.get("NRO_LINEA"))
+        if v is None:
+            continue
+        if ln not in minimos or float(v) < float(minimos[ln]):
+            minimos[ln] = v
+    min_por_prov = {}
+    for r in data:
+        v = r.get("PRECIO_UNITARIO_CRC")
+        ln = str(r.get("NRO_LINEA"))
+        es_min = v is not None and minimos.get(ln) is not None and float(v) == float(minimos[ln])
+        r["ES_PRECIO_MINIMO"] = bool(es_min)
+        if es_min:
+            p = r.get("NOMBRE_PROVEEDOR") or str((r.get("_claves") or {}).get("CEDULA_PROVEEDOR"))
+            min_por_prov[p] = min_por_prov.get(p, 0) + 1
+    adj = [r for r in data if r.get("ES_ADJUDICATARIO") == "S"]
     resumen = {
         "registros_oferta_x_linea": len(data),
-        "ofertas_distintas": len({r.NRO_OFERTA for r in data if r.NRO_OFERTA}),
-        "proveedores_distintos": len({r.CEDULA_PROVEEDOR for r in data if r.CEDULA_PROVEEDOR}),
-        "lineas_del_cartel": len({str(r.NRO_LINEA) for r in data if r.NRO_LINEA is not None}),
-        "lineas_adjudicadas": len({str(r.NRO_LINEA) for r in adj}),
-        "proveedores_adjudicados": len({r.CEDULA_PROVEEDOR for r in adj}),
+        "ofertas_distintas": len({r.get("NRO_OFERTA") for r in data if r.get("NRO_OFERTA")}),
+        "proveedores_distintos": len({r.get("CEDULA_PROVEEDOR") for r in data if r.get("CEDULA_PROVEEDOR")}),
+        "lineas_del_cartel": len({str(r.get("NRO_LINEA")) for r in data if r.get("NRO_LINEA") is not None}),
+        "lineas_adjudicadas": len({str(r.get("NRO_LINEA")) for r in adj}),
+        "proveedores_adjudicados": len({r.get("CEDULA_PROVEEDOR") for r in adj}),
+        "precio_minimo_por_proveedor": min_por_prov,
         "nota": ("'registros_oferta_x_linea' = filas (oferta x linea); 'ofertas_distintas' = "
-                 "documentos de oferta presentados. NO llames 'ofertas' al numero de filas."),
+                 "documentos de oferta. `ES_PRECIO_MINIMO` marca la oferta mas barata de cada linea "
+                 "(el mas barato de la linea, NO necesariamente el ganador); "
+                 "'precio_minimo_por_proveedor' = en cuantas lineas cada proveedor fue el mas barato."),
     }
     return to_plain({"nro_sicop": nro_sicop, "resumen": resumen, "lineas": data,
                      "sobre": sobre("captacion (ofertas x adjudicaciones)", COBERTURA_CRUCE,
@@ -501,6 +522,22 @@ def _enriquecer_procedimiento(rows):
             d = info.setdefault(str(a["NRO_SICOP"]), {})
             d["proc"] = d.get("proc") or a.get("NUMERO_PROCEDIMIENTO")
             d["ced_inst"] = d.get("ced_inst") or a.get("CEDULA")
+    # fallback invitaciones: hay procedimientos sin cartel que SI estan en
+    # gold_invitaciones, que trae numero de procedimiento e institucion.
+    faltan2 = [n for n in nros
+               if not info.get(n, {}).get("proc") or not info.get(n, {}).get("ced_inst")]
+    if faltan2:
+        from django.db import connection
+        try:
+            with connection.cursor() as cur:
+                cur.execute('SELECT DISTINCT "NRO_SICOP", "NUMERO_PROCEDIMIENTO", "CED_INSTITUCION" '
+                            'FROM sicop.gold_invitaciones WHERE "NRO_SICOP" = ANY(%s)', [list(faltan2)])
+                for sicop, proc, inst in cur.fetchall():
+                    d = info.setdefault(str(sicop), {})
+                    d["proc"] = d.get("proc") or proc
+                    d["ced_inst"] = d.get("ced_inst") or inst
+        except Exception:  # noqa: BLE001
+            pass
     for r in rows:
         d = info.get(str(r.get("NRO_SICOP"))) or {}
         if d.get("proc"):
