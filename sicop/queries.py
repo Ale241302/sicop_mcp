@@ -1103,14 +1103,21 @@ def ordenes_proveedor(cedula, anio=None, limit=1000):
     if anio:
         qs = qs.filter(FECHA_ELABORACION_ORDEN__year=anio)
     rows = list(qs.order_by("-FECHA_ELABORACION_ORDEN")[:limit or None])
+    # TOTAL_ORDEN viene REPLICADO por linea: se deduplica por NRO_ORDEN (una orden
+    # cuenta una vez) para no inflar ~3x ni contar lineas como si fueran ordenes.
+    por_orden = {}
+    for r in rows:
+        if r.NRO_ORDEN not in por_orden:
+            por_orden[r.NRO_ORDEN] = r
+    ordenes_u = list(por_orden.values())
     tc_dia = _tc_del_dia()
-    n_crc = sum(1 for r in rows if r.MONEDA_ORDEN == "CRC")
-    otras = [r for r in rows if (r.MONEDA_ORDEN or "") not in ("", "CRC")]
+    n_crc = sum(1 for r in ordenes_u if r.MONEDA_ORDEN == "CRC")
+    otras = [r for r in ordenes_u if (r.MONEDA_ORDEN or "") not in ("", "CRC")]
     n_otras = len(otras)
-    total_crc = float(sum((r.TOTAL_ORDEN or 0) for r in rows if r.MONEDA_ORDEN == "CRC"))
+    total_crc = float(sum((r.TOTAL_ORDEN or 0) for r in ordenes_u if r.MONEDA_ORDEN == "CRC"))
     total_otras_convertido = (float(sum((r.TOTAL_ORDEN or 0) for r in otras)) * tc_dia) if (tc_dia and n_otras) else None
     ordenes_plain = []
-    for r in rows:
+    for r in ordenes_u:
         d = {
             "NRO_ORDEN": r.NRO_ORDEN,
             "NRO_SICOP": r.NRO_SICOP,
@@ -1131,7 +1138,8 @@ def ordenes_proveedor(cedula, anio=None, limit=1000):
     return to_plain({
         "cedula": cedula,
         "anio": anio,
-        "n_ordenes_muestra": len(rows),
+        "n_ordenes_muestra": len(ordenes_u),
+        "n_filas_muestra": len(rows),
         "n_crc": n_crc,
         "n_otras_monedas": n_otras,
         "total_orden_crc_muestra": total_crc,
