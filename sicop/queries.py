@@ -262,7 +262,8 @@ def _adjudicaciones_por_anio(cedula):
     El anio sale del cartel (fecha de publicacion) y, si no hay cartel, del ANO
     de la cruda. monto_crc suma los montos de la cruda y queda None si ese anio
     no tiene montos en la cruda (la cruda no siempre trae el detalle)."""
-    from .models import SicopAdjudicaciones, SicopCarteles, SicopLineasAdjudicadas
+    from .models import (SicopAdjudicaciones, SicopCarteles,
+                         SicopLineasAdjudicadas, SicopOfertas)
 
     reg = {}
 
@@ -300,6 +301,21 @@ def _adjudicaciones_por_anio(cedula):
         fp = c.get("FECHA_PUBLICACION")
         _add(r["NRO_SICOP"], r["NRO_LINEA"], (str(fp)[:4] if fp else None),
              (c.get("CEDULA_INSTITUCION") or None), None)
+
+    # fallback de anio: procedimientos sin cartel ni ANO en la cruda (directas).
+    # Se usa la fecha REAL de presentacion de las ofertas de ese procedimiento.
+    sin_anio = {s for (s, _l), v in reg.items() if not v["ano"]}
+    if sin_anio:
+        anio_of = {}
+        for r in (SicopOfertas.objects.filter(NRO_SICOP__in=sin_anio)
+                  .exclude(FECHA_PRESENTA_OFERTA__isnull=True)
+                  .values("NRO_SICOP", "FECHA_PRESENTA_OFERTA")):
+            f = r["FECHA_PRESENTA_OFERTA"]
+            if f and r["NRO_SICOP"] not in anio_of:
+                anio_of[r["NRO_SICOP"]] = str(f.year)
+        for (s, _l), v in reg.items():
+            if not v["ano"] and s in anio_of:
+                v["ano"] = anio_of[s]
 
     agg = {}
     for (sicop, _linea), v in reg.items():
