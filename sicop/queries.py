@@ -38,20 +38,17 @@ def to_plain(value):
     return value
 
 
-MAX_FILAS = 50000
-
-
 def pagina(qs, limit=0, offset=0):
     """Pagina un queryset SIN truncar en silencio.
 
-    limit<=0 => sin limite (hasta MAX_FILAS, tope de seguridad para no reventar
-    la respuesta). Devuelve (filas, total_real, truncado)."""
+    limit<=0 => SIN limite (devuelve TODAS las filas). Devuelve
+    (filas, total_real, truncado)."""
     total = qs.count()
     off = max(0, int(offset or 0))
     if limit and int(limit) > 0:
         filas = list(qs[off:off + int(limit)])
     else:
-        filas = list(qs[off:off + MAX_FILAS])
+        filas = list(qs[off:])
     return filas, total, len(filas) < total
 
 
@@ -573,7 +570,7 @@ def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, obj
     if limit and int(limit) > 0:
         rows = rows[off:off + int(limit)]
     else:
-        rows = rows[off:off + MAX_FILAS]
+        rows = rows[off:]
     rows = _enriquecer_procedimiento(rows) if rows else []
     return {"resultados": rows, "total": total, "devueltas": len(rows),
             "truncado": len(rows) < total}
@@ -946,7 +943,7 @@ def invitaciones_procedimiento(nro_sicop, limit=0, offset=0):
     except Exception:  # noqa: BLE001  (gold_invitaciones ausente -> cruda)
         qs = SicopInvitaciones.objects.filter(NRO_SICOP=nro_sicop).order_by("FECHA_INVITACION")
         total = qs.count()
-        rows = list(qs[off: off + lim] if lim else qs[off: off + MAX_FILAS])
+        rows = list(qs[off: off + lim] if lim else qs[off:])
     return to_plain({"nro_sicop": nro_sicop, "invitados": rows, "total": total,
                      "devueltas": len(rows), "truncado": len(rows) < total})
 
@@ -1796,6 +1793,7 @@ def procedimientos_buscar(institucion=None, proveedor=None, termino=None,
             cond_lineas_match = cond_r2 = "true"
             params_rm = []
 
+        lim = int(limit) if limit and int(limit) > 0 else None
         sql_final = """
             WITH sel AS (
                 SELECT c."NRO_SICOP" AS nro_sicop,
@@ -1844,7 +1842,7 @@ def procedimientos_buscar(institucion=None, proveedor=None, termino=None,
                    {sub_ejemplo} AS lineas_ejemplo
             FROM proc p
             ORDER BY p.mes DESC, p.nro_sicop DESC
-            LIMIT %s
+            {limit_sql}
         """.format(
             sel_prov=(
                 f"AND EXISTS (SELECT 1 FROM fact_oferta ofv\n"
@@ -1870,6 +1868,7 @@ def procedimientos_buscar(institucion=None, proveedor=None, termino=None,
                 "  FROM (SELECT \"DESC_LINEA\", \"NUMERO_LINEA\" FROM match_lineas\n"
                 "        WHERE \"NRO_SICOP\" = p.nro_sicop ORDER BY \"NUMERO_LINEA\" LIMIT 6) ml2)"
             ) if grupos else "NULL",
+            limit_sql=("LIMIT %s" if lim else ""),
         )
         # orden de parametros (textual en sql_final):
         #   sel CTE:            inst, inst, anio, anio, [prov si sel_prov]
@@ -1885,8 +1884,9 @@ def procedimientos_buscar(institucion=None, proveedor=None, termino=None,
         if grupos:
             params += [termino]
             params += params_rm
-        lim = int(limit) if limit and int(limit) > 0 else 100000
-        params += [prov_ced, prov_ced, lim]
+        params += [prov_ced, prov_ced]
+        if lim:
+            params += [lim]
         with connection.cursor() as cur:
             cur.execute(sql_final, params)
             cols = [c[0] for c in cur.description]
