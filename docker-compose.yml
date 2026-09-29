@@ -33,6 +33,7 @@
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
+      EMBEDDER_URL: http://embedder:8500
       SICOP_DATA_DIR: /data/salidas
       SICOP_SCRIPTS_DIR: /data/scripts
       SICOP_RECOVERY_DIR: /data/recuperacion
@@ -59,6 +60,7 @@
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
+      EMBEDDER_URL: http://embedder:8500
       SICOP_DATA_DIR: /data/salidas
       SICOP_SCRIPTS_DIR: /data/scripts
       SICOP_RECOVERY_DIR: /data/recuperacion
@@ -96,6 +98,7 @@
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
+      EMBEDDER_URL: http://embedder:8500
       SICOP_DATA_DIR: /data/salidas
       SICOP_SCRIPTS_DIR: /data/scripts
       SICOP_RECOVERY_DIR: /data/recuperacion
@@ -106,6 +109,19 @@
         condition: service_started
     ports:
       - "8450:9000"
+
+  embedder:
+    build: ./embedder
+    image: sicop-embedder
+    restart: unless-stopped
+    volumes:
+      - ${SICOP_EMBEDDER_CACHE:-/opt/sicop_embedder/cache}:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8500/health', timeout=5)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
 
 volumes:
   pgdata:
