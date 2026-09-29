@@ -428,7 +428,7 @@ def precios_institucion(familia=None, marca=None, anio=None, limit=100):
 COBERTURA_CRUCE = 0.626
 CAVEATS_BASE = [
     "cobertura del cruce oferta x oferente: 62,6% (1 mes 8%, acumulado)",
-    "2026 parcial (corte 2026-08-25); '2026' en adjudicaciones/contratos/recepciones es actividad observada, no procedimientos nacidos 2026",
+    # el caveat de corte/parcialidad se agrega dinamicamente en sobre()
     "conversiones de moneda usan TIPO_CAMBIO_CRC de la propia fila; ordenes no-CRC convertidas con TC implicito del mes (fallback TC del dia)",
     "MES_PUBLICACION NO es el mes de publicacion real: es el mes del primer ZIP donde se vio la fila (dedup del extractor). NO usar para series temporales/estacionalidad; los datos de un procedimiento pueden vivir bajo meses anteriores.",
     "ninguna serie multianual se publica sin declarar sus huecos: consultar /api/v1/ctl-deriva (deriva por anio)",
@@ -436,9 +436,47 @@ CAVEATS_BASE = [
     "catalogo_productos.LINEAS_EJECUCION sale solo de lineas_contratadas+lineas_recibidas (no incluye ordenes): SKU con ejecucion sin adjudicacion respaldante son huecos de la fuente, no errores",
 ]
 
+_CORTE_CACHE = {"ts": 0.0, "mes": None}
+
+
+def _corte_datos(ttl=6 * 3600):
+    """Ultimo mes cargado en el corpus (max MES_ZIP de adjudicaciones, la tabla
+    de captacion mas completa). Cachea `ttl` segundos y nunca lanza: si falla
+    devuelve None y el caveat de corte se omite."""
+    ahora = datetime.now().timestamp()
+    if _CORTE_CACHE["mes"] and (ahora - _CORTE_CACHE["ts"]) < ttl:
+        return _CORTE_CACHE["mes"]
+    mes = None
+    try:
+        mes = (SicopAdjudicaciones.objects
+               .exclude(MES_ZIP__isnull=True).exclude(MES_ZIP="")
+               .order_by("-MES_ZIP")
+               .values_list("MES_ZIP", flat=True)[:1]
+               .first())
+    except Exception:  # noqa: BLE001
+        mes = None
+    if mes:
+        _CORTE_CACHE["ts"] = ahora
+        _CORTE_CACHE["mes"] = mes
+    return mes
+
+
+def _caveat_parcial():
+    """Caveat de parcialidad/corte derivado del dato real (no hardcodeado)."""
+    mes = _corte_datos()
+    if not mes or len(str(mes)) < 6:
+        return None
+    anio, mm = str(mes)[:4], str(mes)[4:6]
+    return (f"{anio} parcial (datos cargados hasta {anio}-{mm}); '{anio}' en "
+            "adjudicaciones/contratos/recepciones es actividad observada, "
+            f"no procedimientos nacidos {anio}")
+
 
 def sobre(nivel_medicion="no_aplica", cobertura=None, moneda=None, extra=None):
     caveats = list(CAVEATS_BASE)
+    corte = _caveat_parcial()
+    if corte:
+        caveats.insert(1, corte)
     if extra:
         caveats.extend(extra)
     return {
