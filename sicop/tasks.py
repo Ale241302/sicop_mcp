@@ -112,7 +112,9 @@ def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
         if sembrados:
             print(f"  sembrados {len(sembrados)} CSV anuales en recuperacion", flush=True)
         rc = subprocess.run([sys.executable, extractor, "--year", y, "--pesados",
-                             "--no-vigilancia", "--out", out] + (["--force"] if reextraer else []),
+                             "--no-vigilancia", "--out", out,
+                             "--base", settings.SICOP_DATA_DIR]
+                            + (["--force"] if reextraer else []),
                             cwd=os.path.dirname(extractor)).returncode
         if rc != 0:
             control.cerrar_corrida(corrida, "BLOQUEADO", notas=f"extractor rc={rc}")

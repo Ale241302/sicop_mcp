@@ -119,7 +119,7 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
                        lambda y=y, meses_arg=meses_arg: _run(
                            [sys.executable, extractor, "--year", y, "--pesados",
                             "--months", meses_arg, "--replace", "--no-vigilancia",
-                            "--out", out],
+                            "--out", out, "--base", settings.SICOP_DATA_DIR],
                            cwd=os.path.dirname(extractor)),
                        detalle_ok=lambda r, y=y, meses_arg=meses_arg:
                            f"anio {y} meses {meses_arg} re-extraidos rc={r}",
