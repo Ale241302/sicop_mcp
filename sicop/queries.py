@@ -38,6 +38,23 @@ def to_plain(value):
     return value
 
 
+MAX_FILAS = 50000
+
+
+def pagina(qs, limit=0, offset=0):
+    """Pagina un queryset SIN truncar en silencio.
+
+    limit<=0 => sin limite (hasta MAX_FILAS, tope de seguridad para no reventar
+    la respuesta). Devuelve (filas, total_real, truncado)."""
+    total = qs.count()
+    off = max(0, int(offset or 0))
+    if limit and int(limit) > 0:
+        filas = list(qs[off:off + int(limit)])
+    else:
+        filas = list(qs[off:off + MAX_FILAS])
+    return filas, total, len(filas) < total
+
+
 def f_norm_py(texto):
     """Normaliza texto en Python como la funcion SQL f_norm: minusculas, sin
     acentos, espacios simples. Usada para normalizar el input del resolver."""
@@ -482,7 +499,7 @@ def _enriquecer_procedimiento(rows):
     return rows
 
 
-def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, objeto=None, limit=50):
+def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, objeto=None, limit=0, offset=0):
     """Lineas ADJUDICADAS (nivel captacion: lo que un proveedor GANO), a nivel linea.
 
     Une sicop_lineas_adjudicadas (limpia) con sicop_adjudicaciones (mas completa,
@@ -525,13 +542,13 @@ def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, obj
                "TIPO_MONEDA", "DESCUENTO", "IVA", "OTROS_IMPUESTOS", "ACARREOS",
                "TIPO_CAMBIO_CRC", "TIPO_CAMBIO_DOLAR")
     merged = {}
-    for r in la.values(*cols_la).order_by("NRO_SICOP", "NRO_LINEA")[:limit]:
+    for r in la.values(*cols_la).order_by("NRO_SICOP", "NRO_LINEA"):
         merged[(r["NRO_SICOP"], _lk(r["NRO_LINEA"]))] = r
     for r in cr.values(
             "NRO_SICOP", "LINEA", "CEDULA_PROVEEDOR", "PROD_ID", "DESCR_BIEN_SERVICIO",
             "CANTIDAD", "UNIDAD_MEDIDA", "MONTO_UNITARIO", "MONEDA_ADJUDICADA",
             "MONTO_ADJU_LINEA_CRC", "FECHA_ADJUD_FIRME", "OBJETO_GASTO") \
-            .order_by("NRO_SICOP", "LINEA")[:limit]:
+            .order_by("NRO_SICOP", "LINEA"):
         key = (r["NRO_SICOP"], _lk(r["LINEA"]))
         merged.setdefault(key, {
             "NRO_SICOP": r["NRO_SICOP"], "NRO_LINEA": r["LINEA"],
@@ -550,8 +567,16 @@ def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, obj
         ln = _lk(x.get("NRO_LINEA"))
         return (str(x.get("NRO_SICOP") or ""), (0, int(ln)) if ln.isdigit() else (1, 0))
 
-    rows = to_plain(sorted(merged.values(), key=_orden)[:limit])
-    return _enriquecer_procedimiento(rows) if rows else []
+    total = len(merged)
+    rows = to_plain(sorted(merged.values(), key=_orden))
+    off = max(0, int(offset or 0))
+    if limit and int(limit) > 0:
+        rows = rows[off:off + int(limit)]
+    else:
+        rows = rows[off:off + MAX_FILAS]
+    rows = _enriquecer_procedimiento(rows) if rows else []
+    return {"resultados": rows, "total": total, "devueltas": len(rows),
+            "truncado": len(rows) < total}
 
 
 def carteles_objetados(institucion=None, limit=100):
@@ -891,23 +916,39 @@ def regimen_evaluacion(nro_sicop):
 
 # ---- conjuntos recuperados (ofertas, lineas, proveedores, recepciones, recursos, ordenes, invitaciones) ----
 
-def invitaciones_procedimiento(nro_sicop, limit=500):
-    """Quien fue invitado a un procedimiento (contratacion directa: la institucion elige a quien invitar). Usa gold_invitaciones (dedup, indices)."""
+def invitaciones_procedimiento(nro_sicop, limit=0, offset=0):
+    """Quien fue invitado a un procedimiento (contratacion directa: la institucion
+    elige a quien invitar). Usa gold_invitaciones (dedup, indices). limit=0 = SIN
+    LIMITE. Devuelve total real y `truncado`."""
     from django.db import connection
 
-    rows = []
+    lim = int(limit) if limit and int(limit) > 0 else None
+    off = max(0, int(offset or 0))
+    rows, total = [], 0
     try:
         with connection.cursor() as cur:
-            cur.execute(
-                'SELECT "NRO_SICOP","NUMERO_PROCEDIMIENTO","CEDULA_PROVEEDOR","NOMBRE_PROVEEDOR",'
-                '"CED_INSTITUCION","INSTITUCION","FECHA_INVITACION" FROM sicop.gold_invitaciones '
-                'WHERE "NRO_SICOP"=%s ORDER BY "FECHA_INVITACION" LIMIT %s',
-                [nro_sicop, limit])
+            cur.execute('SELECT count(*) FROM sicop.gold_invitaciones WHERE "NRO_SICOP"=%s',
+                        [nro_sicop])
+            total = cur.fetchone()[0]
+            sql = ('SELECT "NRO_SICOP","NUMERO_PROCEDIMIENTO","CEDULA_PROVEEDOR","NOMBRE_PROVEEDOR",'
+                   '"CED_INSTITUCION","INSTITUCION","FECHA_INVITACION" FROM sicop.gold_invitaciones '
+                   'WHERE "NRO_SICOP"=%s ORDER BY "FECHA_INVITACION"')
+            params = [nro_sicop]
+            if lim:
+                sql += " LIMIT %s OFFSET %s"
+                params += [lim, off]
+            elif off:
+                sql += " OFFSET %s"
+                params += [off]
+            cur.execute(sql, params)
             cols = [c[0] for c in cur.description]
             rows = [dict(zip(cols, r)) for r in cur.fetchall()]
     except Exception:  # noqa: BLE001  (gold_invitaciones ausente -> cruda)
-        rows = list(SicopInvitaciones.objects.filter(NRO_SICOP=nro_sicop).order_by("FECHA_INVITACION")[:limit])
-    return to_plain({"nro_sicop": nro_sicop, "invitados": rows})
+        qs = SicopInvitaciones.objects.filter(NRO_SICOP=nro_sicop).order_by("FECHA_INVITACION")
+        total = qs.count()
+        rows = list(qs[off: off + lim] if lim else qs[off: off + MAX_FILAS])
+    return to_plain({"nro_sicop": nro_sicop, "invitados": rows, "total": total,
+                     "devueltas": len(rows), "truncado": len(rows) < total})
 
 
 def invitaciones_proveedor(cedula, limit=200, institucion=None, anio=None):
