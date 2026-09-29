@@ -1573,8 +1573,14 @@ def procedimientos_buscar(institucion=None, proveedor=None, termino=None,
                        {sub_lineas_hit} AS lineas_hit,
                        (SELECT count(*) FROM fact_oferta o
                          WHERE o."NRO_SICOP" = s.nro_sicop) AS n_ofertas,
-                       (SELECT count(*) FROM fact_adjudicacion a
-                         WHERE a."NRO_SICOP" = s.nro_sicop) AS n_adjudicadas
+                       COALESCE(NULLIF((SELECT count(DISTINCT la."NRO_LINEA")
+                                          FROM sicop_lineas_adjudicadas la
+                                         WHERE la."NRO_SICOP" = s.nro_sicop
+                                           AND la."NRO_LINEA" IS NOT NULL), 0),
+                                (SELECT count(DISTINCT fa."NRO_LINEA")
+                                   FROM fact_adjudicacion fa
+                                  WHERE fa."NRO_SICOP" = s.nro_sicop
+                                    AND fa."NRO_LINEA" IS NOT NULL)) AS n_lineas_adjudicadas
                 FROM dedup s
                 LEFT JOIN (
                     SELECT DISTINCT ON ("CEDULA") "CEDULA", "NOMBRE_INSTITUCION"
