@@ -555,12 +555,20 @@ def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, obj
     merged = {}
     for r in la.values(*cols_la).order_by("NRO_SICOP", "NRO_LINEA"):
         merged[(r["NRO_SICOP"], _lk(r["NRO_LINEA"]))] = r
+    cr_extra = {}
     for r in cr.values(
             "NRO_SICOP", "LINEA", "CEDULA_PROVEEDOR", "PROD_ID", "DESCR_BIEN_SERVICIO",
             "CANTIDAD", "UNIDAD_MEDIDA", "MONTO_UNITARIO", "MONEDA_ADJUDICADA",
             "MONTO_ADJU_LINEA_CRC", "FECHA_ADJUD_FIRME", "OBJETO_GASTO") \
             .order_by("NRO_SICOP", "LINEA"):
         key = (r["NRO_SICOP"], _lk(r["LINEA"]))
+        cr_extra[key] = {
+            "monto": r.get("MONTO_ADJU_LINEA_CRC"),
+            "desc": r.get("DESCR_BIEN_SERVICIO"),
+            "fecha": r.get("FECHA_ADJUD_FIRME"),
+            "objeto": r.get("OBJETO_GASTO"),
+            "unidad": r.get("UNIDAD_MEDIDA"),
+        }
         merged.setdefault(key, {
             "NRO_SICOP": r["NRO_SICOP"], "NRO_LINEA": r["LINEA"],
             "CODIGO_PRODUCTO": r.get("PROD_ID"),
@@ -573,6 +581,18 @@ def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, obj
             "FECHA_ADJUD_FIRME": r.get("FECHA_ADJUD_FIRME"),
             "OBJETO_GASTO": r.get("OBJETO_GASTO"),
         })
+    # las filas que vienen de la tabla de lineas no traen monto/descripcion/objeto:
+    # se completan desde la cruda cuando la misma (procedimiento, linea) existe alli.
+    for k, r in merged.items():
+        e = cr_extra.get(k)
+        if not e:
+            continue
+        if r.get("MONTO_ADJU_LINEA_CRC") is None and e["monto"] is not None:
+            r["MONTO_ADJU_LINEA_CRC"] = e["monto"]
+        for dst, src in (("DESCR_BIEN_SERVICIO", "desc"), ("FECHA_ADJUD_FIRME", "fecha"),
+                         ("OBJETO_GASTO", "objeto"), ("UNIDAD_MEDIDA", "unidad")):
+            if r.get(dst) is None and e[src] is not None:
+                r[dst] = e[src]
 
     def _orden(x):
         ln = _lk(x.get("NRO_LINEA"))
