@@ -366,6 +366,42 @@ def expediente(nro_sicop):
     })
 
 
+def _enriquecer_procedimiento(rows):
+    """Agrega NRO_PROCEDIMIENTO y CEDULA_INSTITUCION a filas que traen NRO_SICOP.
+
+    Objetivo: que ninguna respuesta tenga que inventar ni atribuir el numero de
+    procedimiento. Fuente: carteles (numero + institucion); si no hay cartel,
+    la cruda de adjudicaciones (numero)."""
+    from .models import SicopAdjudicaciones, SicopCarteles
+
+    nros = {str(r.get("NRO_SICOP")) for r in rows if r.get("NRO_SICOP")}
+    if not nros:
+        return rows
+    info = {}
+    for c in SicopCarteles.objects.filter(NRO_SICOP__in=nros).values(
+            "NRO_SICOP", "NRO_PROCEDIMIENTO", "CEDULA_INSTITUCION"):
+        d = info.setdefault(str(c["NRO_SICOP"]), {})
+        d["proc"] = d.get("proc") or c.get("NRO_PROCEDIMIENTO")
+        d["ced_inst"] = d.get("ced_inst") or c.get("CEDULA_INSTITUCION")
+    faltan = [n for n in nros if not info.get(n, {}).get("proc")]
+    if faltan:
+        for a in (SicopAdjudicaciones.objects
+                  .filter(NRO_SICOP__in=faltan)
+                  .exclude(NUMERO_PROCEDIMIENTO__isnull=True)
+                  .exclude(NUMERO_PROCEDIMIENTO="")
+                  .values("NRO_SICOP", "NUMERO_PROCEDIMIENTO", "CEDULA")):
+            d = info.setdefault(str(a["NRO_SICOP"]), {})
+            d["proc"] = d.get("proc") or a.get("NUMERO_PROCEDIMIENTO")
+            d["ced_inst"] = d.get("ced_inst") or a.get("CEDULA")
+    for r in rows:
+        d = info.get(str(r.get("NRO_SICOP"))) or {}
+        if d.get("proc"):
+            r.setdefault("NRO_PROCEDIMIENTO", d["proc"])
+        if d.get("ced_inst"):
+            r.setdefault("CEDULA_INSTITUCION", d["ced_inst"])
+    return rows
+
+
 def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, objeto=None, limit=50):
     """Lineas ADJUDICADAS (nivel captacion: lo que un proveedor GANO), a nivel linea.
 
@@ -399,7 +435,7 @@ def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, obj
             "TIPO_CAMBIO_CRC", "TIPO_CAMBIO_DOLAR")
     rows = to_plain(list(qs.values(*cols).order_by("NRO_SICOP", "NRO_LINEA")[:limit]))
     if rows:
-        return rows
+        return _enriquecer_procedimiento(rows)
 
     # fallback: procedimientos que solo estan en la cruda (excluyendo filas sin linea)
     qs2 = SicopAdjudicaciones.objects.exclude(LINEA__isnull=True).exclude(LINEA="")
