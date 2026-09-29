@@ -405,56 +405,77 @@ def _enriquecer_procedimiento(rows):
 def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, objeto=None, limit=50):
     """Lineas ADJUDICADAS (nivel captacion: lo que un proveedor GANO), a nivel linea.
 
-    Fuente principal: sicop_lineas_adjudicadas. NO se usa sicop_adjudicaciones como
-    fuente primaria porque en algunos procedimientos trae filas sin linea (cargadas
-    desde AdjudicacionesFirme.csv) que devolvian filas vacias. Si la tabla de lineas
-    no tiene el procedimiento, se cae a la cruda (excluyendo filas sin linea)."""
+    Une sicop_lineas_adjudicadas (limpia) con sicop_adjudicaciones (mas completa,
+    pero con filas sin linea cargadas desde AdjudicacionesFirme.csv, que se
+    excluyen), deduplicando por (NRO_SICOP, NRO_LINEA): gana la tabla de lineas."""
     from .models import SicopAdjudicaciones, SicopCarteles, SicopLineasAdjudicadas
 
-    qs = (SicopLineasAdjudicadas.objects
+    la = (SicopLineasAdjudicadas.objects
           .exclude(NRO_LINEA__isnull=True).exclude(NRO_LINEA=""))
+    cr = (SicopAdjudicaciones.objects
+          .exclude(LINEA__isnull=True).exclude(LINEA=""))
     if cedula:
-        qs = qs.filter(CEDULA_PROVEEDOR=cedula)
+        la = la.filter(CEDULA_PROVEEDOR=cedula)
+        cr = cr.filter(CEDULA_PROVEEDOR=cedula)
     if nro_sicop:
-        qs = qs.filter(NRO_SICOP=nro_sicop)
+        la = la.filter(NRO_SICOP=nro_sicop)
+        cr = cr.filter(NRO_SICOP=nro_sicop)
     if institucion or anio:
         cq = SicopCarteles.objects.all()
         if institucion:
             cq = cq.filter(CEDULA_INSTITUCION=institucion)
         if anio:
             cq = cq.filter(FECHA_PUBLICACION__year=int(anio))
-        qs = qs.filter(NRO_SICOP__in=cq.values_list("NRO_SICOP", flat=True).distinct())
+        sicops = set(cq.values_list("NRO_SICOP", flat=True).distinct())
+        if institucion:
+            # la cruda tambien trae la institucion en la fila: cubre procedimientos
+            # sin cartel (si no, se perderian adjudicaciones reales del proveedor).
+            sicops |= set(SicopAdjudicaciones.objects.filter(CEDULA=institucion)
+                          .values_list("NRO_SICOP", flat=True).distinct())
+        la = la.filter(NRO_SICOP__in=sicops)
+        cr = cr.filter(NRO_SICOP__in=sicops)
     if objeto:
-        qs = qs.filter(NRO_SICOP__in=(SicopAdjudicaciones.objects
-                                      .filter(OBJETO_GASTO=objeto)
-                                      .values_list("NRO_SICOP", flat=True).distinct()))
+        sicops_o = list(SicopAdjudicaciones.objects.filter(OBJETO_GASTO=objeto)
+                        .values_list("NRO_SICOP", flat=True).distinct())
+        la = la.filter(NRO_SICOP__in=sicops_o)
+        cr = cr.filter(NRO_SICOP__in=sicops_o)
 
-    cols = ("NRO_SICOP", "NRO_LINEA", "NRO_OFERTA", "NRO_ACTO", "CODIGO_PRODUCTO",
-            "CEDULA_PROVEEDOR", "CANTIDAD_ADJUDICADA", "PRECIO_UNITARIO_ADJUDICADO",
-            "TIPO_MONEDA", "DESCUENTO", "IVA", "OTROS_IMPUESTOS", "ACARREOS",
-            "TIPO_CAMBIO_CRC", "TIPO_CAMBIO_DOLAR")
-    rows = to_plain(list(qs.values(*cols).order_by("NRO_SICOP", "NRO_LINEA")[:limit]))
-    if rows:
-        return _enriquecer_procedimiento(rows)
+    def _lk(v):
+        s = str(v if v is not None else "").strip()
+        return str(int(s)) if s.isdigit() else s
 
-    # fallback: procedimientos que solo estan en la cruda (excluyendo filas sin linea)
-    qs2 = SicopAdjudicaciones.objects.exclude(LINEA__isnull=True).exclude(LINEA="")
-    if cedula:
-        qs2 = qs2.filter(CEDULA_PROVEEDOR=cedula)
-    if institucion:
-        qs2 = qs2.filter(CEDULA=institucion)
-    if anio:
-        qs2 = qs2.filter(ANO=str(anio))
-    if nro_sicop:
-        qs2 = qs2.filter(NRO_SICOP=nro_sicop)
-    if objeto:
-        qs2 = qs2.filter(OBJETO_GASTO=objeto)
-    cols2 = ("NRO_SICOP", "ANO", "CEDULA", "INSTITUCION", "NUMERO_PROCEDIMIENTO",
-             "TIPO_PROCEDIMIENTO", "MODALIDAD_PROCEDIMIENTO", "LINEA", "PROD_ID",
-             "DESCR_BIEN_SERVICIO", "CANTIDAD", "UNIDAD_MEDIDA", "MONTO_UNITARIO",
-             "MONEDA_ADJUDICADA", "MONTO_ADJU_LINEA_CRC", "FECHA_ADJUD_FIRME",
-             "CEDULA_PROVEEDOR", "NOMBRE_PROVEEDOR", "OBJETO_GASTO", "MES_PUBLICACION")
-    return to_plain(list(qs2.values(*cols2)[:limit]))
+    cols_la = ("NRO_SICOP", "NRO_LINEA", "NRO_OFERTA", "NRO_ACTO", "CODIGO_PRODUCTO",
+               "CEDULA_PROVEEDOR", "CANTIDAD_ADJUDICADA", "PRECIO_UNITARIO_ADJUDICADO",
+               "TIPO_MONEDA", "DESCUENTO", "IVA", "OTROS_IMPUESTOS", "ACARREOS",
+               "TIPO_CAMBIO_CRC", "TIPO_CAMBIO_DOLAR")
+    merged = {}
+    for r in la.values(*cols_la).order_by("NRO_SICOP", "NRO_LINEA")[:limit]:
+        merged[(r["NRO_SICOP"], _lk(r["NRO_LINEA"]))] = r
+    for r in cr.values(
+            "NRO_SICOP", "LINEA", "CEDULA_PROVEEDOR", "PROD_ID", "DESCR_BIEN_SERVICIO",
+            "CANTIDAD", "UNIDAD_MEDIDA", "MONTO_UNITARIO", "MONEDA_ADJUDICADA",
+            "MONTO_ADJU_LINEA_CRC", "FECHA_ADJUD_FIRME", "OBJETO_GASTO") \
+            .order_by("NRO_SICOP", "LINEA")[:limit]:
+        key = (r["NRO_SICOP"], _lk(r["LINEA"]))
+        merged.setdefault(key, {
+            "NRO_SICOP": r["NRO_SICOP"], "NRO_LINEA": r["LINEA"],
+            "CODIGO_PRODUCTO": r.get("PROD_ID"),
+            "CEDULA_PROVEEDOR": r.get("CEDULA_PROVEEDOR"),
+            "CANTIDAD_ADJUDICADA": r.get("CANTIDAD"),
+            "PRECIO_UNITARIO_ADJUDICADO": r.get("MONTO_UNITARIO"),
+            "TIPO_MONEDA": r.get("MONEDA_ADJUDICADA"),
+            "MONTO_ADJU_LINEA_CRC": r.get("MONTO_ADJU_LINEA_CRC"),
+            "DESCR_BIEN_SERVICIO": r.get("DESCR_BIEN_SERVICIO"),
+            "FECHA_ADJUD_FIRME": r.get("FECHA_ADJUD_FIRME"),
+            "OBJETO_GASTO": r.get("OBJETO_GASTO"),
+        })
+
+    def _orden(x):
+        ln = _lk(x.get("NRO_LINEA"))
+        return (str(x.get("NRO_SICOP") or ""), (0, int(ln)) if ln.isdigit() else (1, 0))
+
+    rows = to_plain(sorted(merged.values(), key=_orden)[:limit])
+    return _enriquecer_procedimiento(rows) if rows else []
 
 
 def carteles_objetados(institucion=None, limit=100):
