@@ -421,7 +421,19 @@ def mercado_familia(familia):
 
 def competencia_procedimiento(nro_sicop):
     rows = GoldCompetenciaPorLinea.objects.filter(NRO_SICOP=nro_sicop).order_by("NRO_LINEA")
-    return to_plain({"nro_sicop": nro_sicop, "lineas": list(rows),
+    data = list(rows)
+    adj = [r for r in data if r.ES_ADJUDICATARIO == "S"]
+    resumen = {
+        "registros_oferta_x_linea": len(data),
+        "ofertas_distintas": len({r.NRO_OFERTA for r in data if r.NRO_OFERTA}),
+        "proveedores_distintos": len({r.CEDULA_PROVEEDOR for r in data if r.CEDULA_PROVEEDOR}),
+        "lineas_del_cartel": len({str(r.NRO_LINEA) for r in data if r.NRO_LINEA is not None}),
+        "lineas_adjudicadas": len({str(r.NRO_LINEA) for r in adj}),
+        "proveedores_adjudicados": len({r.CEDULA_PROVEEDOR for r in adj}),
+        "nota": ("'registros_oferta_x_linea' = filas (oferta x linea); 'ofertas_distintas' = "
+                 "documentos de oferta presentados. NO llames 'ofertas' al numero de filas."),
+    }
+    return to_plain({"nro_sicop": nro_sicop, "resumen": resumen, "lineas": data,
                      "sobre": sobre("captacion (ofertas x adjudicaciones)", COBERTURA_CRUCE,
                                     extra=["la ausencia de registro no es ausencia del hecho (cobertura 62,6%)"])})
 
@@ -1841,8 +1853,10 @@ def procedimientos_buscar(institucion=None, proveedor=None, termino=None,
                 SELECT s.*,
                        i."NOMBRE_INSTITUCION" AS institucion_nombre,
                        {sub_lineas_hit} AS lineas_hit,
-                       (SELECT count(*) FROM fact_oferta o
+                       (SELECT count(DISTINCT o."NRO_OFERTA") FROM fact_oferta o
                          WHERE o."NRO_SICOP" = s.nro_sicop) AS n_ofertas,
+                       (SELECT count(*) FROM fact_oferta o
+                         WHERE o."NRO_SICOP" = s.nro_sicop) AS n_registros_oferta,
                        COALESCE(NULLIF((SELECT count(DISTINCT la."NRO_LINEA")
                                           FROM sicop_lineas_adjudicadas la
                                          WHERE la."NRO_SICOP" = s.nro_sicop

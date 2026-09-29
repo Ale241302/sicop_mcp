@@ -175,6 +175,8 @@ mcp = MCPServer(
         "CONTEO: para decir 'cuantos' usa SIEMPRE los campos que devuelve la tool (`total`, "
         "`total_procedimientos`, `devueltas`); NUNCA cuentes a mano sobre una lista (te equivocas). "
         "Si la tool distingue filas de procedimientos, cita el numero correcto segun lo pedido. "
+        "En competencia, NO confundas 'ofertas_distintas' (documentos de oferta) con "
+        "'registros_oferta_x_linea' (filas); al numero de filas NUNCA lo llames 'ofertas'. "
         "Si la respuesta trae `aviso` de tamano, es COMPLETA pero pesada (no es un recorte). "
         "En busquedas por similitud (kb/productos) `devueltas` es la profundidad K y "
         "`total_candidatos` es el universo: K no es el total. "
