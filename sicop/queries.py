@@ -1187,16 +1187,15 @@ def kb_buscar(pregunta, limit=5):
     if not vec:
         return {"error": "no se pudo embeber (embedder caido)", "resultados": []}
     vec_str = "[" + ",".join(f"{x:.6f}" for x in vec) + "]"
-    limite = int(limit) if limit and int(limit) > 0 else 100000
+    lim = int(limit) if limit and int(limit) > 0 else None
     sql = """
         SELECT e.ref_id, e.texto, 1 - (e.embedding <=> %s::vector) AS sim
         FROM emb_doc e
         WHERE e.coleccion IN ('KB','NORMATIVA') AND e.embedding IS NOT NULL
         ORDER BY e.embedding <=> %s::vector
-        LIMIT %s
-    """
+    """ + ("LIMIT %s" if lim else "LIMIT ALL")
     with connection.cursor() as cur:
-        cur.execute(sql, [vec_str, vec_str, limite])
+        cur.execute(sql, ([vec_str, vec_str, lim] if lim else [vec_str, vec_str]))
         cols = [c[0] for c in cur.description]
         return to_plain({"pregunta": pregunta, "resultados": [dict(zip(cols, r)) for r in cur.fetchall()]})
 
@@ -1243,7 +1242,8 @@ def grafo_competidores(cedula, familia=None, limit=30):
     ced, _ = _resolver_cedula(cedula, tipos=["PROVEEDOR"])
     if not ced:
         return {"error": f"no se pudo resolver '{cedula}'", "competidores": []}
-    lim = int(limit) if limit and int(limit) > 0 else 100000
+    lim = int(limit) if limit and int(limit) > 0 else None
+    limite_sql = f"LIMIT {lim}" if lim else ""
     if familia:
         fam = str(familia)[:6]
         q = (
@@ -1251,13 +1251,13 @@ def grafo_competidores(cedula, familia=None, limit=30):
             f"MATCH (o:Proveedor)-[r:COMPITE_EN]->(f) "
             f"WHERE o <> p "
             f"RETURN {{competidor: o.cedula, n_lineas: r.n_lineas, wins: r.wins, monto_crc: r.monto_crc}} "
-            f"ORDER BY r.wins DESC LIMIT {lim}"
+            f"ORDER BY r.wins DESC {limite_sql}"
         )
         return {"cedula": ced, "familia": fam, "competidores": [_ag_to_py(r) for r in _cypher(q)]}
     rows = _cypher(
         f"MATCH (p:Proveedor {{cedula: '{ced}'}})-[r:COMPITIO_CON]-(o) "
         f"RETURN {{competidor: o.cedula, n_lineas: r.n_lineas, wins_a: r.wins_a, wins_b: r.wins_b}} "
-        f"ORDER BY r.n_lineas DESC LIMIT {lim}"
+        f"ORDER BY r.n_lineas DESC {limite_sql}"
     )
     return {"cedula": ced, "competidores": [_ag_to_py(r) for r in rows]}
 
@@ -1937,13 +1937,13 @@ def preguntar(pregunta):
             respuesta["datos"] = ficha_proveedor(ced)
         elif intencion == "COMPETENCIA" and (ner["cedulas"] or ner["entidad"]):
             ced = ner["cedulas"][0] if ner["cedulas"] else ner["entidad"]["cedula"]
-            respuesta["datos"] = grafo_competidores(ced, ner["familia"], limit=15)
+            respuesta["datos"] = grafo_competidores(ced, ner["familia"], limit=0)
         elif intencion == "MERCADO" and ner["familia"]:
             respuesta["datos"] = mercado_familia(ner["familia"])
         elif intencion == "PROCEDIMIENTO" and ner["nro_sicop"]:
             respuesta["datos"] = expediente(ner["nro_sicop"])
         elif intencion == "PRECIO" and ner["familia"]:
-            respuesta["datos"] = precios_institucion(ner["familia"], limit=10)
+            respuesta["datos"] = precios_institucion(ner["familia"], limit=0)
         elif intencion == "BUSCAR_LICITACION":
             # busqueda de licitaciones por institucion + producto y/o proveedor.
             # Si hay PROVEEDOR (ej 'donde ofertó Sondel'), el termino de producto
@@ -1958,7 +1958,6 @@ def preguntar(pregunta):
                 proveedor=ner.get("proveedor"),
                 termino=termino,
                 anio=_anio_consulta(texto, ner),
-                limit=10,
             )
         elif intencion in ("KB", "GENERAL"):
             respuesta["datos"] = kb_buscar(texto, limit=3)
