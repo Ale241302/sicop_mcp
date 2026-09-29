@@ -108,6 +108,13 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
             por_anio[m[:4]].append(m[4:])
         for y, mms in sorted(por_anio.items()):
             meses_arg = ",".join(sorted(set(mms)))
+            # sembrar la base COMPLETA del anio en recuperacion: si no, el
+            # --replace quita el mes de una copia parcial y el guard de recarga
+            # rechaza el archivo -> el mes re-extraido nunca llega a silver.
+            _paso(corrida, f"sembrar_{y}",
+                  lambda y=y: loader.sembrar_recuperacion(
+                      out, settings.SICOP_DATA_DIR, y),
+                  detalle_ok=lambda s: f"{len(s)} CSV anuales sembrados")
             rc = _paso(corrida, f"extractor_{y}_{meses_arg}",
                        lambda y=y, meses_arg=meses_arg: _run(
                            [sys.executable, extractor, "--year", y, "--pesados",

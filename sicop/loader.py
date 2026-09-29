@@ -77,6 +77,33 @@ GOLD_SETS = {
 YEARS = [str(y) for y in range(2020, 2027)]
 
 
+def set_for_filename(path):
+    """Deriva el conjunto de un CSV por su nombre `{set}_{AAAA}.csv`.
+
+    Usa rpartition (NO split('_')[0]): con split, `adjudicaciones_firme_2026.csv`
+    daria `adjudicaciones` y se cargaria en el modelo equivocado. Ver O5
+    (bug 2026-09 que vacio la captacion 2026).
+    """
+    stem = os.path.basename(path)[:-4] if path.endswith(".csv") else os.path.basename(path)
+    setn, _, year = stem.rpartition("_")
+    if setn and year.isdigit() and len(year) == 4:
+        return setn
+    return None
+
+
+def _guard_model_file(model_name, path):
+    """Rechaza cargar un archivo en el modelo de OTRO conjunto (defensa en profundidad)."""
+    setn = set_for_filename(path)
+    if not setn:
+        return
+    expected = CORE_SETS.get(setn)
+    if expected and expected != model_name:
+        raise ValueError(
+            f"{os.path.basename(path)} pertenece a {expected}, no a {model_name} "
+            f"(conjunto '{setn}'). Rechazado por _guard_model_file."
+        )
+
+
 def sha256_of(path):
     h = hashlib.sha256()
     with open(path, "rb") as fh:
@@ -157,6 +184,7 @@ def load_csv(model, path, force=False):
     """Carga un CSV en el modelo. Devuelve dict de metricas."""
     from django.apps import apps
 
+    _guard_model_file(model, path)
     model = apps.get_model("sicop", model)
     table = model._meta.db_table
     file_name = os.path.basename(path)
@@ -243,6 +271,45 @@ def discover_files(data_dir):
         if os.path.exists(p):
             jobs.append((model, p))
     return jobs
+
+
+def sembrar_recuperacion(recovery_dir, data_dir, year, sets=None):
+    """Copia {set}_{year}.csv de data_dir (Salidas) a recovery_dir ANTES de correr
+    el extractor.
+
+    Sin esto, el extractor opera sobre una copia PARCIAL que vive en recuperacion:
+    con --replace quita el mes y lo re-agrega, pero los meses que no estan en esa
+    copia se pierden; el guard de recargar_anio_afectado (<50%) entonces rechaza
+    copiarla a Salidas y el mes re-extraido NUNCA llega a las tablas/silver (bug
+    2026-09: el mes en curso quedaba solo en bronze).
+
+    Sembrar hace que el extractor parta de la base completa; el --replace deja el
+    archivo completo con ese mes reemplazado y la recarga si lo copia.
+
+    No pisa un recovery que ya sea >= que Salidas (evita retroceder). Devuelve la
+    lista de archivos sembrados.
+    """
+    import shutil
+
+    copiados = []
+    for setn in (sets or list(CORE_SETS)):
+        src = os.path.join(data_dir, f"{setn}_{year}.csv")
+        if setn == "invitaciones" and not os.path.exists(src):
+            # layout especial del Observatorio: invitaciones_{anio}-NNN.csv
+            for fn in sorted(os.listdir(data_dir)):
+                if fn.startswith(f"invitaciones_{year}-") and fn.endswith(".csv"):
+                    src = os.path.join(data_dir, fn)
+                    break
+        if not os.path.exists(src):
+            continue
+        dst = os.path.join(recovery_dir, f"{setn}_{year}.csv")
+        if os.path.exists(dst) and os.path.getsize(dst) >= os.path.getsize(src):
+            continue
+        os.makedirs(recovery_dir, exist_ok=True)
+        shutil.copyfile(src, dst)
+        copiados.append(f"{setn}_{year}.csv")
+        logger.info("  sembrado %s (%dB) para extraccion", dst, os.path.getsize(dst))
+    return copiados
 
 
 def recargar_anio_afectado(recovery_dir, data_dir, year, corrida=None, umbral=0.5):

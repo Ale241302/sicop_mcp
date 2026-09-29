@@ -106,6 +106,11 @@ def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
         extractor = os.path.join(settings.SICOP_SCRIPTS_DIR, "harness_actualizado", "sicop_loop.py")
         out = settings.SICOP_RECOVERY_DIR
 
+        # sembrar la base COMPLETA del anio en recuperacion: si no, el extractor
+        # opera sobre una copia parcial y el mes re-extraido no llega a silver.
+        sembrados = loader.sembrar_recuperacion(out, settings.SICOP_DATA_DIR, y)
+        if sembrados:
+            print(f"  sembrados {len(sembrados)} CSV anuales en recuperacion", flush=True)
         rc = subprocess.run([sys.executable, extractor, "--year", y, "--pesados",
                              "--no-vigilancia", "--out", out] + (["--force"] if reextraer else []),
                             cwd=os.path.dirname(extractor)).returncode
