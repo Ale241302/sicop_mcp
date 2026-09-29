@@ -255,19 +255,77 @@ def resumen():
     return out
 
 
+def _adjudicaciones_por_anio(cedula):
+    """Adjudicaciones de un proveedor agregadas por anio, desde la union de
+    fuentes (sicop_lineas_adjudicadas + sicop_adjudicaciones sin filas sin linea).
+
+    El anio sale del cartel (fecha de publicacion) y, si no hay cartel, del ANO
+    de la cruda. monto_crc suma los montos de la cruda y queda None si ese anio
+    no tiene montos en la cruda (la cruda no siempre trae el detalle)."""
+    from .models import SicopAdjudicaciones, SicopCarteles, SicopLineasAdjudicadas
+
+    reg = {}
+
+    def _add(sicop, linea, ano, inst, monto):
+        k = (sicop, _lk(linea))
+        prev = reg.get(k)
+        if prev is None:
+            reg[k] = {"ano": ano, "inst": inst, "monto": monto}
+            return
+        if not prev["ano"] and ano:
+            prev["ano"] = ano
+        if not prev["inst"] and inst:
+            prev["inst"] = inst
+        if prev["monto"] is None and monto is not None:
+            prev["monto"] = monto
+
+    for r in (SicopAdjudicaciones.objects.filter(CEDULA_PROVEEDOR=cedula)
+              .exclude(LINEA__isnull=True).exclude(LINEA="")
+              .values("NRO_SICOP", "LINEA", "ANO", "CEDULA", "MONTO_ADJU_LINEA_CRC")):
+        m = r["MONTO_ADJU_LINEA_CRC"]
+        _add(r["NRO_SICOP"], r["LINEA"], (r["ANO"] or None), (r["CEDULA"] or None),
+             float(m) if m is not None else None)
+
+    lineas = list(SicopLineasAdjudicadas.objects.filter(CEDULA_PROVEEDOR=cedula)
+                  .exclude(NRO_LINEA__isnull=True).exclude(NRO_LINEA="")
+                  .values("NRO_SICOP", "NRO_LINEA"))
+    sicops = {r["NRO_SICOP"] for r in lineas}
+    cart = {}
+    if sicops:
+        for c in (SicopCarteles.objects.filter(NRO_SICOP__in=sicops)
+                  .values("NRO_SICOP", "FECHA_PUBLICACION", "CEDULA_INSTITUCION")):
+            cart.setdefault(c["NRO_SICOP"], c)
+    for r in lineas:
+        c = cart.get(r["NRO_SICOP"]) or {}
+        fp = c.get("FECHA_PUBLICACION")
+        _add(r["NRO_SICOP"], r["NRO_LINEA"], (str(fp)[:4] if fp else None),
+             (c.get("CEDULA_INSTITUCION") or None), None)
+
+    agg = {}
+    for (sicop, _linea), v in reg.items():
+        a = agg.setdefault(v["ano"] or "(sin anio)", {
+            "n_lineas": 0, "monto_crc": 0.0, "hay_monto": False,
+            "procedimientos": set(), "instituciones": set()})
+        a["n_lineas"] += 1
+        a["procedimientos"].add(sicop)
+        if v["inst"]:
+            a["instituciones"].add(v["inst"])
+        if v["monto"] is not None:
+            a["monto_crc"] += v["monto"]
+            a["hay_monto"] = True
+
+    return [{
+        "ANO": ano,
+        "n_lineas": a["n_lineas"],
+        "monto_crc": round(a["monto_crc"], 2) if a["hay_monto"] else None,
+        "instituciones": len(a["instituciones"]),
+        "procedimientos": len(a["procedimientos"]),
+    } for ano, a in sorted(agg.items())]
+
+
 def ficha_proveedor(cedula):
     """Ficha completa de un proveedor por cedula."""
-    adj = list(
-        SicopAdjudicaciones.objects.filter(CEDULA_PROVEEDOR=cedula)
-        .values("ANO")
-        .annotate(
-            n_lineas=Count("id"),
-            monto_crc=Sum("MONTO_ADJU_LINEA_CRC"),
-            instituciones=Count("CEDULA", distinct=True),
-            procedimientos=Count("NRO_SICOP", distinct=True),
-        )
-        .order_by("ANO")
-    )
+    adj = _adjudicaciones_por_anio(cedula)
     perfil = SicopAdjudicaciones.objects.filter(CEDULA_PROVEEDOR=cedula).values("NOMBRE_PROVEEDOR", "PERFIL_PROV").first()
     cartera = list(GoldCarteraProveedor.objects.filter(CEDULA_PROVEEDOR=cedula).order_by("ANIO_EJECUCION"))
     desempeno = list(GoldDesempenoProveedor.objects.filter(CEDULA_PROVEEDOR=cedula))
@@ -366,6 +424,12 @@ def expediente(nro_sicop):
     })
 
 
+def _lk(v):
+    """Normaliza un numero de linea a string entero (para deduplicar)."""
+    s = str(v if v is not None else "").strip()
+    return str(int(s)) if s.isdigit() else s
+
+
 def _enriquecer_procedimiento(rows):
     """Agrega NRO_PROCEDIMIENTO y CEDULA_INSTITUCION a filas que traen NRO_SICOP.
 
@@ -439,10 +503,6 @@ def adjudicaciones(cedula=None, institucion=None, anio=None, nro_sicop=None, obj
                         .values_list("NRO_SICOP", flat=True).distinct())
         la = la.filter(NRO_SICOP__in=sicops_o)
         cr = cr.filter(NRO_SICOP__in=sicops_o)
-
-    def _lk(v):
-        s = str(v if v is not None else "").strip()
-        return str(int(s)) if s.isdigit() else s
 
     cols_la = ("NRO_SICOP", "NRO_LINEA", "NRO_OFERTA", "NRO_ACTO", "CODIGO_PRODUCTO",
                "CEDULA_PROVEEDOR", "CANTIDAD_ADJUDICADA", "PRECIO_UNITARIO_ADJUDICADO",
