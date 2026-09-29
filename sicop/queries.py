@@ -910,28 +910,62 @@ def invitaciones_procedimiento(nro_sicop, limit=500):
     return to_plain({"nro_sicop": nro_sicop, "invitados": rows})
 
 
-def invitaciones_proveedor(cedula, limit=200):
-    """Procedimientos donde un proveedor fue invitado (plan: invitaciones_pendientes).
+def invitaciones_proveedor(cedula, limit=200, institucion=None, anio=None):
+    """Procedimientos donde un proveedor fue invitado. Filtros opcionales por
+    institucion (cedula) y anio (de publicacion del procedimiento). Devuelve el
+    TOTAL real de coincidencias y `truncado` (si la lista supera `limit`), para
+    que nunca se lea una lista recortada como si fuera completa.
     Usa gold_invitaciones (indice idx_ginv_ced) en vez de la cruda de 62M filas."""
     from django.db import connection
 
-    rows = []
+    limite = max(1, int(limit))
+    cond = ['gi."CEDULA_PROVEEDOR"=%s']
+    params = [cedula]
+    if institucion:
+        cond.append('gi."CED_INSTITUCION"=%s')
+        params.append(institucion)
+    if anio:
+        cond.append('EXISTS (SELECT 1 FROM sicop_carteles c WHERE c."NRO_SICOP"=gi."NRO_SICOP" '
+                    'AND c."FECHA_PUBLICACION" >= %s AND c."FECHA_PUBLICACION" < %s)')
+        params.extend([f"{anio}-01-01", f"{int(anio) + 1}-01-01"])
+    where = " AND ".join(cond)
+
+    rows, total = [], 0
     try:
         with connection.cursor() as cur:
+            cur.execute(f"SELECT count(*) FROM sicop.gold_invitaciones gi WHERE {where}", params)
+            total = cur.fetchone()[0]
             cur.execute(
-                'SELECT "NRO_SICOP","NUMERO_PROCEDIMIENTO","CED_INSTITUCION","INSTITUCION",'
-                '"FECHA_INVITACION" FROM sicop.gold_invitaciones '
-                'WHERE "CEDULA_PROVEEDOR"=%s ORDER BY "FECHA_INVITACION" DESC LIMIT %s',
-                [cedula, limit])
+                'SELECT gi."NRO_SICOP", gi."NUMERO_PROCEDIMIENTO", gi."CED_INSTITUCION", '
+                'gi."INSTITUCION", gi."FECHA_INVITACION" FROM sicop.gold_invitaciones gi '
+                f'WHERE {where} ORDER BY gi."FECHA_INVITACION" DESC LIMIT %s',
+                params + [limite])
             cols = [c[0] for c in cur.description]
             rows = [dict(zip(cols, r)) for r in cur.fetchall()]
     except Exception:  # noqa: BLE001
+        from .models import SicopCarteles
+
+        qs = SicopInvitaciones.objects.filter(CEDULA_PROVEEDOR=cedula)
+        if institucion:
+            qs = qs.filter(CED_INSTITUCION=institucion)
+        if anio:
+            qs = qs.filter(NRO_SICOP__in=SicopCarteles.objects.filter(
+                FECHA_PUBLICACION__year=int(anio)).values("NRO_SICOP"))
+        total = qs.count()
         rows = list(
-            SicopInvitaciones.objects.filter(CEDULA_PROVEEDOR=cedula)
-            .values("NRO_SICOP", "NUMERO_PROCEDIMIENTO", "CED_INSTITUCION", "INSTITUCION", "FECHA_INVITACION", "MES_PUBLICACION")
-            .order_by("-FECHA_INVITACION")[:limit]
+            qs.values("NRO_SICOP", "NUMERO_PROCEDIMIENTO", "CED_INSTITUCION", "INSTITUCION",
+                      "FECHA_INVITACION")
+            .order_by("-FECHA_INVITACION")[:limite]
         )
-    return to_plain({"cedula": cedula, "invitaciones": rows, "total": len(rows)})
+    return to_plain({
+        "cedula": cedula,
+        "invitaciones": rows,
+        "total": total,
+        "devueltas": len(rows),
+        "truncado": len(rows) < total,
+        "nota": ("si truncado=True hay mas invitaciones que las devueltas: subi limit "
+                 "o filtra por institucion/anio para verlas todas"),
+    })
 
 
 def invitados_vs_ofertantes(nro_sicop):

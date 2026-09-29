@@ -364,12 +364,16 @@ def sicop_invitaciones_procedimiento(nro_sicop: str, limit: int = 500) -> dict:
 
 
 @mcp.tool()
-def sicop_invitaciones_proveedor(cedula: str, limit: int = 200) -> dict:
-    """Procedimientos donde un proveedor fue invitado (plan: invitaciones_pendientes). Acepta cedula o nombre/alias."""
+def sicop_invitaciones_proveedor(cedula: str, institucion: str = "", anio: str = "", limit: int = 200) -> dict:
+    """Procedimientos donde un proveedor fue invitado (invitacion != participacion). Acepta cedula o nombre/alias. Filtra por institucion (cedula o nombre/alias) y anio (publicacion del procedimiento). Devuelve el total REAL y `truncado`; si truncado=True hay mas de las devueltas."""
     ced, _ = queries._resolver_cedula(cedula, tipos=["PROVEEDOR"])
     if not ced:
         return {"error": f"no se pudo resolver '{cedula}'", "resultados": []}
-    return wrap(queries.invitaciones_proveedor(ced, limit))
+    inst = ""
+    if institucion:
+        inst, _ = queries._resolver_cedula(institucion, tipos=["INSTITUCION"])
+        inst = inst or institucion
+    return wrap(queries.invitaciones_proveedor(ced, limit, inst or None, anio or None))
 
 
 @mcp.tool()
