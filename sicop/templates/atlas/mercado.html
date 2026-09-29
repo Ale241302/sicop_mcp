@@ -11,8 +11,8 @@
 
 <h2>Oferentes top</h2>
 {% if m and m.oferentes_top %}
-<table><tr><th>Oferente</th><th class="r">Ofertas</th><th class="r">Ganadas</th></tr>
-{% for o in m.oferentes_top %}<tr><td>{{ o.NOMBRE_PROVEEDOR }}</td><td class="r">{{ o.n_ofertas }}</td><td class="r">{{ o.n_ganadas }}</td></tr>{% endfor %}
+<table><tr><th>Oferente</th><th class="r">Reg. oferta×línea</th><th class="r">Ofertas</th><th class="r">Ganadas</th></tr>
+{% for o in m.oferentes_top %}<tr><td>{{ o.NOMBRE_PROVEEDOR }}</td><td class="r">{{ o.registros_oferta_x_linea }}</td><td class="r">{{ o.ofertas_distintas }}</td><td class="r">{{ o.n_ganadas }}</td></tr>{% endfor %}
 </table>
 {% endif %}
 

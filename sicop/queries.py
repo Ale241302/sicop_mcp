@@ -402,8 +402,10 @@ def mercado_familia(familia):
     ofertas = list(
         GoldCompetenciaPorLinea.objects.filter(CODIGO_PRODUCTO_CL__startswith=familia)
         .values("CEDULA_PROVEEDOR", "NOMBRE_PROVEEDOR")
-        .annotate(n_ofertas=Count("id"), n_ganadas=Count("id", filter=Q(ES_ADJUDICATARIO="S")))
-        .order_by("-n_ofertas")[:20]
+        .annotate(registros_oferta_x_linea=Count("id"),
+                  ofertas_distintas=Count("NRO_OFERTA", distinct=True),
+                  n_ganadas=Count("id", filter=Q(ES_ADJUDICATARIO="S")))
+        .order_by("-registros_oferta_x_linea")[:20]
     )
     catalogo = list(GoldCatalogoProductos.objects.filter(FAMILIA_UNSPSC=familia).order_by("-LINEAS_EJECUCION")[:20])
     desempeno = list(GoldDesempenoPorFamilia.objects.filter(FAMILIA_UNSPSC=familia).order_by("-LINEAS_RECIBIDAS")[:10])
@@ -777,7 +779,8 @@ def producto_historia(codigo_cl):
     catalogo = list(GoldCatalogoProductos.objects.filter(CODIGO_PRODUCTO_CL=codigo_cl))
     ofertas = list(
         GoldCompetenciaPorLinea.objects.filter(CODIGO_PRODUCTO_CL=codigo_cl)
-        .values("MES_PUBLICACION", "PRECIO_UNITARIO_CRC", "ES_ADJUDICATARIO", "NOMBRE_PROVEEDOR")
+        .values("MES_PUBLICACION", "PRECIO_UNITARIO_CRC", "ES_ADJUDICATARIO",
+                "NOMBRE_PROVEEDOR", "NRO_OFERTA")
     )
     por_anio = {}
     for o in ofertas:
@@ -790,7 +793,8 @@ def producto_historia(codigo_cl):
         n_ganadas = sum(1 for o in por_anio[anio] if o["ES_ADJUDICATARIO"] == "S")
         serie.append({
             "anio": anio,
-            "n_ofertas": len(por_anio[anio]),
+            "registros_oferta_x_linea": len(por_anio[anio]),
+            "ofertas_distintas": len({o["NRO_OFERTA"] for o in por_anio[anio] if o["NRO_OFERTA"]}),
             "n_adjudicaciones": n_ganadas,
             "precio_crc_mediano": statistics.median(vals) if vals else None,
             "precio_crc_min": min(vals) if vals else None,
