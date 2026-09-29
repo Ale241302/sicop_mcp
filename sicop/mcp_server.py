@@ -610,26 +610,33 @@ def sicop_verificar_procedimiento(nro_sicop: str) -> dict:
     contratos, ordenes y recepciones. Si algo da 0, la licitacion puede existir
     en SICOP pero faltar aca -> usar sicop_reparar_mes para el mes."""
     from sicop.models import (SicopAdjudicaciones, SicopAdjudicacionesFirme,
-                              SicopCarteles, SicopContratos, SicopLineasCartel,
-                              SicopOfertas, SicopOrdenesPedido, SicopRecepciones)
+                              SicopCarteles, SicopContratos, SicopLineasAdjudicadas,
+                              SicopLineasCartel, SicopOfertas, SicopOrdenesPedido,
+                              SicopRecepciones)
 
     tabs = {
         "cartel": SicopCarteles,
         "lineas_cartel": SicopLineasCartel,
         "ofertas": SicopOfertas,
-        "adjudicaciones": SicopAdjudicaciones,
+        "lineas_adjudicadas": SicopLineasAdjudicadas,
+        "adjudicaciones_raw": SicopAdjudicaciones,
         "adjudicacion_firme": SicopAdjudicacionesFirme,
         "contratos": SicopContratos,
         "ordenes_pedido": SicopOrdenesPedido,
         "recepciones": SicopRecepciones,
     }
     conteos = {n: M.objects.filter(NRO_SICOP=nro_sicop).count() for n, M in tabs.items()}
-    completo = conteos["cartel"] > 0 and conteos["lineas_cartel"] > 0 and conteos["adjudicaciones"] > 0
+    completo = (conteos["cartel"] > 0 and conteos["lineas_cartel"] > 0
+                and (conteos["lineas_adjudicadas"] > 0
+                     or conteos["adjudicaciones_raw"] > 0))
     return {
         "nro_sicop": nro_sicop,
         "conteos": conteos,
         "completo": completo,
-        "nota": "si el cartel/lineas da 0 pero sabes que existe en SICOP, el mes no se extrajo -> sicop_reparar_mes",
+        "nota": ("lineas_adjudicadas = lineas ganadas (fuente confiable a nivel linea). "
+                 "adjudicaciones = filas de la tabla cruda, que puede traer filas sin "
+                 "linea: NO usar como conteo de lineas adjudicadas. "
+                 "Si cartel/lineas da 0 pero sabes que existe en SICOP -> sicop_reparar_mes"),
     }
 
 
