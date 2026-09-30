@@ -75,6 +75,39 @@ def _warm_count(cache_key, table):
         pass
 
 
+def _huecos_mes():
+    """Huecos IRRECUPERABLES por mes/conjunto (meta.hueco_declarado)."""
+    from django.db import connection
+
+    try:
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT conjunto, mes, tipo, motivo FROM meta.hueco_declarado "
+                "ORDER BY tipo, mes, conjunto")
+            cols = [c[0] for c in cur.description]
+            return [dict(zip(cols, r)) for r in cur.fetchall()]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _ctx_huecos_mes(notables=12):
+    """Contexto de huecos por mes: total, resumen por tipo y notables
+    (TRUNCADO_FUENTE / REPUBLICADO) para el home; la tabla completa va a Calidad."""
+    from collections import Counter
+
+    rows = _huecos_mes()
+    resumen = Counter(r["tipo"] for r in rows)
+    not_rel = [r for r in rows if r["tipo"] in ("TRUNCADO_FUENTE", "REPUBLICADO")]
+    # los truncados (mes publicado incompleto) primero, luego las republicaciones
+    not_rel.sort(key=lambda r: (0 if r["tipo"] == "TRUNCADO_FUENTE" else 1, r["mes"]))
+    return {
+        "huecos_mes_total": len(rows),
+        "huecos_mes_resumen": [{"tipo": k, "n": v} for k, v in resumen.most_common()],
+        "huecos_mes_notables": not_rel[:notables],
+        "huecos_mes": rows[:300],
+    }
+
+
 def index(request):
     from sicop.models import CtlTest, CtlDeriva, Senal, CtlCorrida
 
@@ -125,6 +158,7 @@ def index(request):
         "corridas": corridas,
         "senales": senales,
         "deriva": list(CtlDeriva.objects.filter(LLENADO_PCT__lt=95).values("CONJUNTO", "CAMPO", "ANIO", "LLENADO_PCT").order_by("LLENADO_PCT")[:12]),
+        **_ctx_huecos_mes(12),
         "sobre": queries.sobre("mixto", queries.COBERTURA_CRUCE),
     }
     return render(request, "atlas/index.html", ctx)
@@ -245,6 +279,7 @@ def calidad(request):
         "tests": tests,
         "corridas": corridas,
         "campos": list(CatalogoCampo.objects.exclude(TRAMPA__isnull=True)[:40]),
+        **_ctx_huecos_mes(40),
         "vigilancia": list(VigilanciaCheck.objects.order_by("-fecha")[:20]),
         "pasos": pasos,
         "bronze": _bronze_count(),

@@ -37,8 +37,9 @@
 {% else %}<p class="bad">Sin corridas todavía.</p>{% endif %}
 </div>
 
-<h2>Huecos declarados (campos que la fuente no llena algunos años)</h2>
+<h2>Huecos declarados</h2>
 <div class="card">
+<h3 style="margin-top:0">Por campo (la fuente no lo llena algunos años)</h3>
 {% if deriva %}
 <table><tr><th>Conjunto</th><th>Campo</th><th>Año</th><th class="r">Llenado</th></tr>
 {% for d in deriva %}<tr><td>{{ d.CONJUNTO }}</td><td>{{ d.CAMPO }}</td><td>{{ d.ANIO }}</td>
@@ -46,6 +47,21 @@
 </table>
 <p class="wa" style="font-size:13px"><b>hueco</b> = el campo existe en el esquema pero la fuente no lo publica ese año. Es una declaración, no un error.</p>
 {% else %}<p>Sin campos por debajo del 95%.</p>{% endif %}
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">Por mes · conjunto (la fuente no publicó el dato) — {{ huecos_mes_total }}</h3>
+{% if huecos_mes_resumen %}
+<p style="font-size:13px">{% for r in huecos_mes_resumen %}<span class="badge wa">{{ r.tipo }}: {{ r.n }}</span> {% endfor %}</p>
+{% endif %}
+{% if huecos_mes_notables %}
+<table><tr><th>Conjunto</th><th>Mes</th><th>Tipo</th><th>Motivo</th></tr>
+{% for h in huecos_mes_notables %}<tr><td>{{ h.conjunto }}</td><td>{{ h.mes }}</td>
+<td><span class="badge wa">{{ h.tipo }}</span></td>
+<td style="max-width:460px;overflow:hidden;text-overflow:ellipsis">{{ h.motivo }}</td></tr>{% endfor %}
+</table>
+<p class="wa" style="font-size:13px"><b>ZIP_VACIO</b> = miembro ausente/vacío en el ZIP · <b>TRUNCADO_FUENTE</b> = mes publicado incompleto · <b>REPUBLICADO</b> = la fuente copió el mes anterior · <b>CONSOLIDADO</b> = las claves viven bajo otro mes. No son errores de carga; la fuente no lo publicó. <a href="/atlas/calidad/">ver todos →</a></p>
+{% else %}<p>Sin huecos de mes declarados.</p>{% endif %}
 </div>
 
 <h2>Señales del día</h2>
