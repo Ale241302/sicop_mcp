@@ -280,6 +280,7 @@ def calidad(request):
         "corridas": corridas,
         "campos": list(CatalogoCampo.objects.exclude(TRAMPA__isnull=True)[:40]),
         **_ctx_huecos_mes(40),
+        "n_huecos_campo": CtlDeriva.objects.filter(LLENADO_PCT=0).count(),
         "vigilancia": list(VigilanciaCheck.objects.order_by("-fecha")[:20]),
         "pasos": pasos,
         "bronze": _bronze_count(),

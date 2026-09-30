@@ -12,6 +12,8 @@
   <div class="kpi"><div class="n {% if n_bloq %}bad{% else %}ok{% endif %}">{{ n_bloq }}</div><div class="l">bloqueadas</div></div>
   <div class="kpi"><div class="n {% if n_colg_viejo %}bad{% endif %}">{{ n_colg }}</div><div class="l">en curso</div></div>
   <div class="kpi"><div class="n">{{ campos|length }}</div><div class="l">trampas documentadas</div></div>
+  <div class="kpi"><div class="n wa">{{ huecos_mes_total }}</div><div class="l">huecos por mes declarados</div></div>
+  <div class="kpi"><div class="n wa">{{ n_huecos_campo }}</div><div class="l">huecos por campo</div></div>
 </div>
 
 <h2>Tests como gate <span class="sobre" style="margin-left:8px">cada corrida publica solo si los 8 pasan</span></h2>
