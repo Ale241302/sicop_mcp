@@ -89,7 +89,12 @@ def index(request):
     corridas = list(CtlCorrida.objects.order_by("-INICIADO_EN")[:6])
     senales = list(Senal.objects.order_by("-fecha")[:8])
     fails = sum(1 for t in tests if t.RESULTADO == "FAIL")
-    ultima_estado = corridas[0].ESTADO if corridas else None
+    # El estado se juzga por la ultima corrida TERMINADA: una corrida EN_CURSO
+    # legitima (p.ej. un reparar_mes) NO debe marcar 'requiere atencion'.
+    ultima = next((c for c in corridas
+                   if c.ESTADO in ("PUBLICADO", "OK", "BLOQUEADO", "FALLIDA")), None)
+    ultima_estado = ultima.ESTADO if ultima else None
+    en_curso = next((c.CORRIDA_ID for c in corridas if c.ESTADO == "EN_CURSO"), None)
     sano = fails == 0 and ultima_estado in ("PUBLICADO", "OK")
 
     ctx = {
@@ -98,7 +103,8 @@ def index(request):
         "sano": sano,
         "fails": fails,
         "ultima_estado": ultima_estado,
-        "ultima_corrida": corridas[0].CORRIDA_ID if corridas else "—",
+        "ultima_corrida": ultima.CORRIDA_ID if ultima else "—",
+        "en_curso": en_curso,
         "tests": tests,
         "corridas": corridas,
         "senales": senales,
@@ -196,8 +202,24 @@ def calidad(request):
     n_pass = len(tests) - fails
     n_pub = sum(1 for c in corridas if c.ESTADO == "PUBLICADO")
     n_bloq = sum(1 for c in corridas if c.ESTADO == "BLOQUEADO")
+    from django.utils import timezone
+
+    ahora = timezone.now()
+
+    def _horas(c):
+        d = c.INICIADO_EN
+        if d is None:
+            return 0.0
+        if timezone.is_naive(d):
+            d = timezone.make_aware(d)
+        return (ahora - d).total_seconds() / 3600.0
+
     n_colg = sum(1 for c in corridas if c.ESTADO == "EN_CURSO")
-    if fails or n_bloq or n_colg:
+    # Solo una corrida EN_CURSO VIEJA (colgada, > 6h) es un problema; una recien
+    # lanzada (p.ej. un reparar_mes en curso) es normal.
+    n_colg_viejo = sum(1 for c in corridas
+                       if c.ESTADO == "EN_CURSO" and _horas(c) > 6)
+    if fails or n_bloq or n_colg_viejo:
         veredicto, vcls = "Requiere atencion", "r"
     else:
         veredicto, vcls = "Saludable", "g"
@@ -213,6 +235,7 @@ def calidad(request):
         "veredicto": veredicto, "vcls": vcls,
         "n_pass": n_pass, "n_fail": fails,
         "n_pub": n_pub, "n_bloq": n_bloq, "n_colg": n_colg,
+        "n_colg_viejo": n_colg_viejo,
     }
     return render(request, "atlas/calidad.html", ctx)
 

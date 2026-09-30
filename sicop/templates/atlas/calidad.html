@@ -9,7 +9,8 @@
   <div class="kpi"><div class="n ok">{{ n_pass }}</div><div class="l">tests PASS</div></div>
   <div class="kpi"><div class="n {% if n_fail %}bad{% else %}ok{% endif %}">{{ n_fail }}</div><div class="l">tests FAIL</div></div>
   <div class="kpi"><div class="n ok">{{ n_pub }}</div><div class="l">corridas publicadas</div></div>
-  <div class="kpi"><div class="n {% if n_bloq or n_colg %}bad{% else %}ok{% endif %}">{{ n_bloq }}</div><div class="l">bloqueadas</div></div>
+  <div class="kpi"><div class="n {% if n_bloq %}bad{% else %}ok{% endif %}">{{ n_bloq }}</div><div class="l">bloqueadas</div></div>
+  <div class="kpi"><div class="n {% if n_colg_viejo %}bad{% endif %}">{{ n_colg }}</div><div class="l">en curso</div></div>
   <div class="kpi"><div class="n">{{ campos|length }}</div><div class="l">trampas documentadas</div></div>
 </div>
 
