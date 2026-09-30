@@ -5,9 +5,9 @@
 <p style="color:var(--mut)">Datos abiertos de contratación pública de Costa Rica · 2020–2026.</p>
 
 {% if sano %}
-<div class="salud g"><b>Estado: al día</b> · última corrida terminada <code>{{ ultima_corrida }}</code> ({{ ultima_estado }}) · 0 tests fallidos{% if en_curso %} · <b>en curso:</b> <code>{{ en_curso }}</code>{% endif %}</div>
+<div class="salud g"><b>Estado: al día</b> · {{ fails }} tests fallidos · última corrida <code>{{ ultima_corrida }}</code> ({{ ultima_estado }}){% if en_curso %} · <b>en curso:</b> <code>{{ en_curso }}</code>{% endif %}</div>
 {% else %}
-<div class="salud r"><b>Estado: requiere atención</b> · {{ fails }} tests fallidos · última corrida terminada <code>{{ ultima_corrida }}</code> ({{ ultima_estado }}) · <a href="/atlas/calidad/" style="color:var(--bad)">ver calidad</a></div>
+<div class="salud r"><b>Estado: requiere atención</b> · {{ fails }} tests fallidos · última corrida <code>{{ ultima_corrida }}</code> ({{ ultima_estado }}) · <a href="/atlas/calidad/" style="color:var(--bad)">ver calidad</a></div>
 {% endif %}
 
 <h2>El corpus en una vista</h2>

@@ -88,14 +88,30 @@ def index(request):
     tests = list(CtlTest.objects.order_by("-id")[:8])
     corridas = list(CtlCorrida.objects.order_by("-INICIADO_EN")[:6])
     senales = list(Senal.objects.order_by("-fecha")[:8])
+    from django.utils import timezone
+
     fails = sum(1 for t in tests if t.RESULTADO == "FAIL")
-    # El estado se juzga por la ultima corrida TERMINADA: una corrida EN_CURSO
-    # legitima (p.ej. un reparar_mes) NO debe marcar 'requiere atencion'.
-    ultima = next((c for c in corridas
-                   if c.ESTADO in ("PUBLICADO", "OK", "BLOQUEADO", "FALLIDA")), None)
-    ultima_estado = ultima.ESTADO if ultima else None
+    # El estado del corpus se juzga por SENALES (igual que la vista Calidad):
+    # tests fallidos, corridas bloqueadas o una EN_CURSO colgada (>6h). Un fallo
+    # de corrida puntual (p.ej. una tarea perdida y relanzada) NO marca 'requiere
+    # atencion'; se ve en el estado mostrado, no en el semaforo.
+    ahora = timezone.now()
+
+    def _horas(c):
+        d = c.INICIADO_EN
+        if d is None:
+            return 0.0
+        if timezone.is_naive(d):
+            d = timezone.make_aware(d)
+        return (ahora - d).total_seconds() / 3600.0
+
+    n_bloq = sum(1 for c in corridas if c.ESTADO == "BLOQUEADO")
+    n_colg_viejo = sum(1 for c in corridas
+                       if c.ESTADO == "EN_CURSO" and _horas(c) > 6)
     en_curso = next((c.CORRIDA_ID for c in corridas if c.ESTADO == "EN_CURSO"), None)
-    sano = fails == 0 and ultima_estado in ("PUBLICADO", "OK")
+    ultima = corridas[0] if corridas else None
+    ultima_estado = ultima.ESTADO if ultima else None
+    sano = fails == 0 and n_bloq == 0 and n_colg_viejo == 0
 
     ctx = {
         "titulo": "Atlas SICOP",
