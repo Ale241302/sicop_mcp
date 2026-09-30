@@ -829,6 +829,28 @@ class SicopLineasRecibidas(TimestampedMixin):
         indexes = [models.Index(fields=['NRO_SICOP'])]
 
 
+class SicopLineasSistema(TimestampedMixin):
+    """lineas_sistema (Sistemas.csv) - lineas de sistema con publicacion.
+
+    Conjunto chico que la skill lista entre los 25 y que antes ni se cargaba
+    ni se bronceaba (hueco detectado 2026-09-30). El corte por publicacion hace
+    que existan programas de 2020/2021 y no de anios recientes.
+    """
+    NRO_SICOP = models.TextField(blank=True, null=True)
+    NUMERO_LINEA = models.TextField(blank=True, null=True)
+    NUMERO_PARTIDA = models.TextField(blank=True, null=True)
+    DESC_LINEA = models.TextField(blank=True, null=True)
+    CEDULA_INSTITUCION = models.TextField(blank=True, null=True)
+    NRO_PROCEDIMIENTO = models.TextField(blank=True, null=True)
+    TIPO_PROCEDIMIENTO = models.TextField(blank=True, null=True)
+    FECHA_PUBLICACION = models.DateField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'sicop_lineas_sistema'
+        verbose_name = 'lineas_sistema'
+        indexes = [models.Index(fields=['NRO_SICOP'])]
+
+
 class SicopRecursos(TimestampedMixin):
     """sicop_recursos."""
     NRO_RECURSO = models.TextField(blank=True, null=True)
@@ -1534,4 +1556,27 @@ class CtlRetencion(models.Model):
 
     class Meta:
         db_table = 'ctl_retencion'
+
+
+class CtlSello(models.Model):
+    """ctl_sello (skill §12.5): sha256 de codigo y configuracion por corrida.
+
+    Cada lote sella el hash de los artefactos que gobiernan la extraccion
+    (extractor, harness, configuracion versionada). El merge de una reescritura
+    (`--replace`) compara el sello del arranque contra el del cierre: si algo
+    cambio a mitad de corrida, la mezcla se rechaza en vez de publicarse.
+    """
+    corrida = models.TextField(blank=True, null=True)
+    artefacto = models.TextField(blank=True, null=True)
+    sha256 = models.TextField(blank=True, null=True)
+    tamano_bytes = models.BigIntegerField(null=True, blank=True)
+    rol = models.TextField(blank=True, null=True)  # codigo | config | datos
+    sellado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ctl_sello'
+        indexes = [models.Index(fields=['corrida'])]
+        constraints = [
+            models.UniqueConstraint(fields=['corrida', 'artefacto'], name='ctl_sello_corrida_artefacto_key'),
+        ]
 

@@ -47,9 +47,9 @@ class SembrarRecuperacionTest(SimpleTestCase):
             rec = Path(td) / "rec"
             data.mkdir()
             rec.mkdir()
-            (data / "ordenes_pedido_2026.csv").write_text("a\n" * 100, encoding="utf-8")
+            (data / "ordenes_pedido_2026.csv").write_text("a\n" * 100, encoding="utf-8", newline="\n")
             # recovery trae una copia PARCIAL (mas chica)
-            (rec / "ordenes_pedido_2026.csv").write_text("a\n" * 5, encoding="utf-8")
+            (rec / "ordenes_pedido_2026.csv").write_text("a\n" * 5, encoding="utf-8", newline="\n")
             copiados = loader.sembrar_recuperacion(str(rec), str(data), "2026")
             self.assertIn("ordenes_pedido_2026.csv", copiados)
             self.assertEqual((rec / "ordenes_pedido_2026.csv").stat().st_size,
@@ -63,8 +63,8 @@ class SembrarRecuperacionTest(SimpleTestCase):
             rec = Path(td) / "rec"
             data.mkdir()
             rec.mkdir()
-            (data / "ordenes_pedido_2026.csv").write_text("a\n" * 5, encoding="utf-8")
-            (rec / "ordenes_pedido_2026.csv").write_text("a\n" * 100, encoding="utf-8")
+            (data / "ordenes_pedido_2026.csv").write_text("a\n" * 5, encoding="utf-8", newline="\n")
+            (rec / "ordenes_pedido_2026.csv").write_text("a\n" * 100, encoding="utf-8", newline="\n")
             copiados = loader.sembrar_recuperacion(str(rec), str(data), "2026")
             self.assertEqual(copiados, [])
             self.assertEqual((rec / "ordenes_pedido_2026.csv").stat().st_size,

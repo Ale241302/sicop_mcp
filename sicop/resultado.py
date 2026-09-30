@@ -88,7 +88,7 @@ def registrar_resultado(nro_sicop, nro_linea, decision, build_id, snapshot_ts,
 
 
 def consolidar_resultados(corrida_id=None):
-    """Resuelve PENDIENTE del consolidado diario (06:00) usando el dato ya cargado.
+    """Resuelve PENDIENTE del consolidado diario (00:00 CR) usando el dato ya cargado.
     Rellena resultado/posicion/precio ganador SOLO donde se puede dirimir del ZIP."""
     from .models import FactAdjudicacion, FactOferta
 

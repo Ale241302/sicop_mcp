@@ -52,6 +52,7 @@ CORE_SETS = {
     "recepciones": "SicopRecepciones",
     "ordenes_pedido": "SicopOrdenesPedido",
     "invitaciones": "SicopInvitaciones",
+    "lineas_sistema": "SicopLineasSistema",
 }
 
 GOLD_SETS = {
@@ -230,6 +231,15 @@ def load_csv(model, path, force=False):
 
     with open(path, encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
+        # Registrar el esquema REAL visto (skill §7: columna ausente -> gate).
+        # Se sella por conjunto (no por tabla) para poder comparar contra las
+        # columnas esperadas del extractor en control._chequeo_esquema().
+        try:
+            from . import control
+            control.registrar_esquema(set_for_filename(path) or table,
+                                      reader.fieldnames or [], corrida_id=None)
+        except Exception as e:  # noqa: BLE001  (el registro no debe romper la carga)
+            logger.warning("no pude registrar esquema de %s: %s", file_name, e)
         for row in reader:
             obj = model()
             for name in field_spec:
@@ -319,7 +329,8 @@ def sembrar_recuperacion(recovery_dir, data_dir, year, sets=None):
     return copiados
 
 
-def recargar_anio_afectado(recovery_dir, data_dir, year, corrida=None, umbral=0.5):
+def recargar_anio_afectado(recovery_dir, data_dir, year, corrida=None, umbral=0.5,
+                           sello_esperado=None):
     """Recarga las tablas del anio afectado tras una reescritura de la fuente.
 
     1. Copia {set}_{year}.csv de recovery_dir a data_dir SOLO si cambio el hash.
@@ -328,8 +339,22 @@ def recargar_anio_afectado(recovery_dir, data_dir, year, corrida=None, umbral=0.
     Guarda de seguridad: si el archivo recuperado es notablemente mas chico que
     el vigente (< umbral de bytes), NO se borra nada y se reporta la omision
     (la extraccion pudo salir incompleta).
+
+    `sello_esperado`: dict {artefacto: sha256} sellado al arrancar la corrida
+    (skill §12.5). Si el codigo o la configuracion cambiaron a mitad de camino,
+    la mezcla se RECHAZA en vez de publicarse a medias.
     """
     from django.apps import apps
+
+    if sello_esperado:
+        from . import sellos
+
+        diffs = sellos.verificar(sello_esperado)
+        if diffs:
+            raise RuntimeError(
+                "merge rechazado: codigo/config cambio a mitad de corrida "
+                f"({len(diffs)} artefacto(s)): "
+                + "; ".join(f"{k} {a}->{b}" for k, a, b in diffs[:5]))
 
     copied = []
     for fn in sorted(os.listdir(recovery_dir)):

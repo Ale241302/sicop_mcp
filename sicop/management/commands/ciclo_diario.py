@@ -1,7 +1,9 @@
 """Ciclo diario (FASE 2): vigilancia + consolidar + senales + cola + gold.
 
+Horario: 00:00 hora CR, de domingo a viernes (horario muerto).
+
 Uso:
-  python manage.py ciclo_diario                 # el ciclo completo de las 06:00
+  python manage.py ciclo_diario                 # el ciclo completo de las 00:00
   python manage.py ciclo_diario --sin-gold      # sin rebuild de gold
   python manage.py ciclo_diario --sin-reproceso # no re-extraer meses cambiados
 """

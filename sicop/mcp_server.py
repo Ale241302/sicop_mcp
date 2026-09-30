@@ -189,7 +189,7 @@ mcp = MCPServer(
         "Usa sicop_diagnostico para ver que necesita atencion, sicop_verificar_procedimiento para una "
         "licitacion especifica, sicop_reconciliar para huecos por mes, sicop_reparar_mes para reparar un mes. "
         "La ingesta es DETERMINISTA (el extractor lee ZIP oficiales); NO edites datos crudos a mano. "
-        "El ciclo diario 06:00/18:00 detecta y reprocesa reescrituras de la fuente automaticamente."
+        "El ciclo diario de las 00:00 CR (dom-vie) detecta y reprocesa reescrituras de la fuente automaticamente."
     ),
 )
 
@@ -934,7 +934,7 @@ def sicop_reconciliar(anio: str = "", solo_reporte: bool = True) -> dict:
 def sicop_autocorregir() -> dict:
     """Autocorreccion del cron: detecta FAIL de tests, corridas BLOQUEADO y
     EN_CURSO colgadas y las corrige (re-corre gold+tests una vez, boundado 6h),
-    dejando log. Es el mismo paso que corre el ciclo diario 06:00/18:00."""
+    dejando log. Es el mismo paso que corre el ciclo diario de las 00:00 CR (dom-vie)."""
     from sicop.autocorregir import corregir, detectar
 
     return {"problemas": detectar(), "acciones": corregir()}
@@ -1015,7 +1015,7 @@ def sicop_diagnostico() -> dict:
 
 @mcp.tool()
 def sicop_ciclo_diario(corrida: str = "") -> dict:
-    """EJECUTA el ciclo diario de las 06:00: vigilancia + consolidar + senales + cola + gold."""
+    """EJECUTA el ciclo diario de las 00:00 CR (dom-vie): vigilancia + consolidar + senales + cola + gold."""
     from sicop.ciclo import ciclo_diario
 
     return ciclo_diario(corrida=corrida or None, reprocesar=False, gold=False)

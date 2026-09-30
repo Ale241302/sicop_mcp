@@ -23,7 +23,7 @@ BRONZE_SETS = ["adjudicaciones", "adjudicaciones_firme", "carteles", "lineas_car
                "lineas_recibidas", "contratos", "etapas", "garantias", "inhibiciones",
                "instituciones", "procedimientos_adm", "reajustes", "remates",
                "sanciones_registro", "recursos", "proveedores", "recepciones",
-               "ordenes_pedido", "invitaciones"]
+               "ordenes_pedido", "invitaciones", "evaluacion_ofertas", "lineas_sistema"]
 
 
 def _linea_hash(row):

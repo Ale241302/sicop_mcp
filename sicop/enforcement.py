@@ -82,4 +82,27 @@ def pruebas_politica(corrida_id="politica"):
     probe = detectar_acceso_crudo("/api/v1/adjudicaciones/?file=C:\\Salidas\\ofertas.csv")
     r["p5_detector_acceso_crudo"] = _test(corrida_id, "p5_detector_acceso_crudo", probe is not None,
                                           f"detectado={probe}", "detectar")
+
+    # P6: `inhibiciones` no expone nombre/cedula del funcionario por defecto
+    # (Ley 8968; decision en 04_verificaciones/DECISION_INHIBICIONES_API.md).
+    try:
+        from django.conf import settings as _s
+
+        from .api.serializers import serializer_for
+        from .models import SicopInhibiciones
+
+        obj = SicopInhibiciones(NOM_FUNCIONARIO="JUAN PEREZ SOLANO",
+                                CED_FUNCIONARIO="102340567")
+        data = serializer_for(SicopInhibiciones)(obj).data
+        expuesto = getattr(_s, "SICOP_INHIBICIONES_NOMBRES", False)
+        minimizado = (data.get("NOM_FUNCIONARIO") != "JUAN PEREZ SOLANO"
+                      and "*" in (data.get("CED_FUNCIONARIO") or ""))
+        r["p6_inhibiciones_minimizadas"] = _test(
+            corrida_id, "p6_inhibiciones_minimizadas", expuesto or minimizado,
+            f"expuesto={expuesto} nombre={data.get('NOM_FUNCIONARIO')}",
+            "nombre+cedula enmascarados por defecto")
+    except Exception as e:  # noqa: BLE001
+        r["p6_inhibiciones_minimizadas"] = _test(
+            corrida_id, "p6_inhibiciones_minimizadas", False,
+            f"error: {type(e).__name__}: {e}", "correr")
     return r

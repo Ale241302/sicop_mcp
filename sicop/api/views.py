@@ -76,7 +76,7 @@ FILTERABLE = {
     "SicopContratos": ["NRO_SICOP", "NRO_CONTRATO", "CEDULA_PROVEEDOR", "CEDULA_INSTITUCION", "TIPO_CONTRATO", "MES_PUBLICACION"],
     "SicopEtapas": ["NRO_SICOP", "MES_PUBLICACION"],
     "SicopGarantias": ["NRO_SICOP", "CEDULA_PROVEEDOR", "CEDULA_INSTITUCION", "TIPO_GARANTIA"],
-    "SicopInhibiciones": ["CED_INSTITUCION", "NOM_FUNCIONARIO", "ESTADO"],
+    "SicopInhibiciones": ["CED_INSTITUCION", "CED_FUNCIONARIO", "ESTADO"],
     "SicopInstituciones": ["CEDULA", "NOMBRE_INSTITUCION"],
     "SicopAdjudicacionesFirme": ["NRO_SICOP", "MES_PUBLICACION"],
     "GoldCatalogoProductos": ["FAMILIA_UNSPSC", "MARCA", "MARCA_PLAUSIBLE"],

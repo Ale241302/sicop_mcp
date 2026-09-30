@@ -36,6 +36,7 @@ _TABLAS = [
     ("sicop_lineas_contratadas", "MES_PUBLICACION"),
     ("sicop_lineas_ofertadas", "MES_PUBLICACION"),
     ("sicop_lineas_recibidas", "MES_PUBLICACION"),
+    ("sicop_lineas_sistema", "MES_PUBLICACION"),
     ("sicop_ofertas", "MES_PUBLICACION"),
     ("sicop_ordenes_pedido", "MES_PUBLICACION"),
     ("sicop_recepciones", "MES_PUBLICACION"),

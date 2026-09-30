@@ -1,4 +1,8 @@
-"""Ciclo diario (plan FASE 2.4.2): 06:00 descarga+delta+senales+cola, gold y gates.
+"""Ciclo diario (plan FASE 2.4.2): 00:00 CR descarga+delta+senales+cola, gold y gates.
+
+Horario: una sola corrida al dia a las 00:00 hora CR, de domingo a viernes
+(horario muerto: nadie usa el sistema y el CPU queda libre el resto del dia).
+El ZIP que procesa es el que la fuente publico ayer a las 08:00.
 
 Pasos: TC del dia -> vigilar reescritura -> (extractor + recarga + silver si hubo
 cambios) -> consolidar PENDIENTES -> senales -> cola -> gold (derivadas) -> tests.
@@ -15,7 +19,7 @@ from datetime import datetime
 
 from django.utils import timezone
 
-from . import autocorregir, control, resultado, senales, vigilancia
+from . import autocorregir, control, resultado, senales, sellos, vigilancia
 from .models import CorridaPaso, Senal
 
 logger = logging.getLogger(__name__)
@@ -79,6 +83,11 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
     control.registrar_corrida(corrida, "ciclo_diario", notas="FASE 2")
     print(f"== ciclo diario {corrida} ==", flush=True)
 
+    # Sello de codigo+config al arrancar (skill §12.5): si un agente edita el
+    # extractor o la configuracion a mitad de corrida, el merge se rechaza.
+    sello = _paso(corrida, "sello", lambda: sellos.sellar(corrida),
+                  detalle_ok=lambda s: f"{len(s)} artefactos sellados") or {}
+
     # 0) TC del dia: consultar UNA vez, guardar en ctl_bccr_tc
     def _tc():
         from sicop import bccr
@@ -90,6 +99,7 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
     cambios = _paso(corrida, "vigilancia", lambda: vigilancia.revisar_reescritura(corrida=corrida),
                     detalle_ok=lambda c: f"meses revisados; cambios={c}")
     recargados = []
+    sello_roto = False  # codigo/config cambio a mitad de corrida (skill §12.5)
     if cambios and reprocesar:
         from collections import defaultdict
 
@@ -123,34 +133,58 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
                        detalle_ok=lambda r, y=y, meses_arg=meses_arg:
                            f"anio {y} meses {meses_arg} re-extraidos rc={r}",
                        detalle_err=lambda e, y=y: f"extractor {y}: {e}")
+        # Cuarentena del extractor -> base (antes quedaba solo en disco).
+        qdir = os.path.join(out, "_cuarentena")
+        _paso(corrida, "cuarentena",
+              lambda: control.registrar_cuarentena_desde_archivo(corrida, qdir),
+              detalle_ok=lambda n: f"{n} filas crudas en ctl_cuarentena")
+
+        # Verificacion del sello (skill §12.5): el codigo/config que arranco es
+        # el que termina. Si cambio algo a mitad de camino, no se publica mezcla.
+        diffs = sellos.comparar(sello, sellos.sello_actual())
+        sello_roto = bool(diffs)
+        _registrar_paso(corrida, "sello_verificacion",
+                        "ERROR" if sello_roto else "OK",
+                        ("cambio a mitad de corrida: "
+                         + "; ".join(f"{k} {a}->{b}" for k, a, b in diffs[:5]))
+                        if sello_roto else f"{len(sello)} artefactos sin cambios")
+        if sello_roto:
+            print("  sello ROTO: se omite la recarga para no publicar una mezcla",
+                  flush=True)
+
         # recargar a Postgres el/los anio(s) afectado(s)
-        for y in sorted({m[:4] for m in cambios}):
+        for y in ([] if sello_roto else sorted({m[:4] for m in cambios})):
             def _recargar(y=y):
-                return loader.recargar_anio_afectado(out, settings.SICOP_DATA_DIR, y, corrida=corrida)
+                return loader.recargar_anio_afectado(
+                    out, settings.SICOP_DATA_DIR, y, corrida=corrida,
+                    sello_esperado=sello)
             r = _paso(corrida, f"recarga_{y}", _recargar,
                       detalle_ok=lambda rr: f"copiados={rr.get('copiados')}",
                       detalle_err=lambda e: f"recarga {y}: {e}")
             if r:
                 recargados.append(r)
-        # bronze: nuevo snapshot inmutable SOLO de los meses cambiados (append-only)
-        def _broncear():
-            total = 0
-            for y in sorted({m[:4] for m in cambios}):
-                meses_cambio = {m for m in cambios if m[:4] == y}
-                for setn in bronze.BRONZE_SETS:
-                    p = os.path.join(out, f"{setn}_{y}.csv")
-                    if os.path.exists(p) and os.path.getsize(p) > 1000:
-                        total += bronze.construir(setn, p, corrida, meses=meses_cambio)
-            return total
-        _paso(corrida, "broncear", _broncear,
-              detalle_ok=lambda t: f"+{t} filas (meses {sorted(cambios)})")
-        # el mes ya se reproceso (recarga+bronce): la senal de reescritura queda ATENDIDA
-        for m in cambios:
-            senales.atender_cambio_fuente(m, corrida)
-        if any(r.get("copiados") for r in recargados):
-            _paso(corrida, "silver",
-                  lambda: silver.build_all(corrida),
-                  detalle_ok=lambda _: "6 hechos reconstruidos (fact_*)")
+        # bronze + atender senal + silver: SOLO si el sello no se rompio (si no,
+        # el mes no se reproceso y marcarlo ATENDIDO ocultaria la reescritura).
+        if not sello_roto:
+            # bronze: nuevo snapshot inmutable SOLO de los meses cambiados (append-only)
+            def _broncear():
+                total = 0
+                for y in sorted({m[:4] for m in cambios}):
+                    meses_cambio = {m for m in cambios if m[:4] == y}
+                    for setn in bronze.BRONZE_SETS:
+                        p = os.path.join(out, f"{setn}_{y}.csv")
+                        if os.path.exists(p) and os.path.getsize(p) > 1000:
+                            total += bronze.construir(setn, p, corrida, meses=meses_cambio)
+                return total
+            _paso(corrida, "broncear", _broncear,
+                  detalle_ok=lambda t: f"+{t} filas (meses {sorted(cambios)})")
+            # el mes ya se reproceso (recarga+bronce): la senal de reescritura queda ATENDIDA
+            for m in cambios:
+                senales.atender_cambio_fuente(m, corrida)
+            if any(r.get("copiados") for r in recargados):
+                _paso(corrida, "silver",
+                      lambda: silver.build_all(corrida),
+                      detalle_ok=lambda _: "6 hechos reconstruidos (fact_*)")
 
     # 2) consolidar PENDIENTES de resultado_decision
     _paso(corrida, "consolidar", lambda: resultado.consolidar_resultados(corrida),
@@ -197,19 +231,24 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
             else:
                 ok, failed = res_tests
             fallidos = (failed or [])
-        control.cerrar_corrida(corrida, "PUBLICADO" if not fallidos else "BLOQUEADO",
-                               notas=f"senales={n}; tests={len(fallidos)} fallidos")
+        control.cerrar_corrida(corrida,
+                               "BLOQUEADO" if (fallidos or sello_roto) else "PUBLICADO",
+                               notas=(f"senales={n}; tests={len(fallidos)} fallidos; "
+                                      f"{control.resumen_resultados(corrida).get(control.NO_EVALUADO, 0)} no evaluados"
+                                      + ("; SELLO ROTO (mezcla rechazada)" if sello_roto else "")))
         # 5b) CAPAS DERIVADAS: SOLO si el gold + gate pasaron (el dato que se
         # sirve es el nuevo). Si gold/tests fallaron la corrida queda BLOQUEADO
         # y autocorregir re-corre gold+tests; las capas se sincronizan entonces.
-        if not fallidos:
+        if not fallidos and not sello_roto:
             from sicop.sync_capas import sync_capas as run_sync_capas
 
             _paso(corrida, "capas", lambda: run_sync_capas(corrida=f"{corrida}-capas"),
                   detalle_ok=lambda r: f"{len(r['pasos'])} pasos; "
                                        f"{sum(1 for p in r['pasos'] if p['estado']=='OK')} OK")
     else:
-        control.cerrar_corrida(corrida, "OK", notas=f"senales={n}")
+        control.cerrar_corrida(corrida, "BLOQUEADO" if sello_roto else "OK",
+                               notas=f"senales={n}"
+                                     + ("; SELLO ROTO (mezcla rechazada)" if sello_roto else ""))
 
     # 6) AUTOCORREGIR: el cron detecta FAIL/BLOQUEADO/EN_CURSO colgadas y las
     # corrige dejando log (solo re-corre gold+tests una vez, boundado 6h).

@@ -75,16 +75,21 @@ Toda respuesta de negocio lleva el **sobre** (envelope del plan §5.4): `nivel_m
 Filtros por igualdad con el nombre de columna exacto (`CEDULA_PROVEEDOR`, `NRO_SICOP`, `ANO`, ...)
 y `?search=` en los recursos con texto.
 
-## FASE 2 — ciclo diario (cron 06:00)
+## FASE 2 — ciclo diario (cron 00:00 CR, dom–vie)
+
+Horario muerto a propósito: el ciclo corre a las **00:00 hora CR, de domingo a
+viernes** (no sábado), cuando nadie usa el sistema y el CPU queda libre el resto
+del día para la re-extracción pesada si la fuente reescribió un mes. El ZIP que
+procesa es el que la fuente publicó ayer a las 08:00.
 
 ```bash
 python manage.py ciclo_diario               # corrida manual del ciclo
 celery -A config worker -l info             # worker (ya en tu stack)
-celery -A config beat -l info               # cron: ciclo-diario 06:00 · vigilancia 06:05 · consolidar 06:15
+celery -A config beat -l info               # cron: ciclo-diario 00:00 · vigilancia 00:05 · consolidar 00:15 · sync-capas 00:20
 ```
 
-- **Ciclo diario**: vigilancia de reescritura (mes en curso + 3 cerrados + 2 rotativos) → consolidar PENDIENTES
-  de resultado → señales de la watchlist → cola priorizada → gold + tests-gate.
+- **Ciclo diario**: sello de código+config → vigilancia de reescritura (todos los meses desde 202001) → (extractor + recarga + silver si hubo cambios) → consolidar PENDIENTES
+  de resultado → señales de la watchlist → cola priorizada → gold + tests-gate (incluye A2 y esquema).
 - **`resultado_decision`** (SCH_RESULTADO v1, `/api/v1/resultados/`, POST `/api/v1/resultado-registrar/`):
   grano `(nro_sicop, nro_linea, decision_id)`, **append-only**, contexto congelado obligatorio
   (`build_id/snapshot_ts/modelo_version/features_hash`), `override` como campo clave.
@@ -176,5 +181,5 @@ Tools MCP: `sicop_fact_requerimiento/oferta/adjudicacion/contrato/orden/recepcio
   contra `MONTO_ADJUDICADO_CRC`. Medir por adjudicaciones subestima hasta 59x (caso SONDEL 2026: 64x).
 - **Monedas:** las ordenes traen 5 monedas (CRC/USD/EUR/JPY/GBP); solo se suman colones.
 - **Cobertura:** `competencia_por_linea` cubre el 62,6% del cruce oferta x oferente (documentado en el paquete).
-- **Privacidad:** `inhibiciones` contiene funcionarios; no publicar consolidados sin decision expresa (Ley 8968).
+- **Privacidad:** `inhibiciones` contiene funcionarios; la API **enmascara nombre y cédula por defecto** (Ley 8968) y no permite búsqueda por nombre. Se habilita con `SICOP_INHIBICIONES_NOMBRES=1` para uso dirigido y autorizado. Decisión escrita: `04_verificaciones/DECISION_INHIBICIONES_API.md`.
 - Limpieza: las celdas invalidas de montos/fechas se cargan como NULL (contadas en `estado-carga`).

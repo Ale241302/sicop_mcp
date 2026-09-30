@@ -80,7 +80,7 @@ def _meses_objetivo():
     """TODOS los meses desde 202001 hasta el actual, en CADA ciclo.
 
     Barrido completo, no rotativo: cada HEAD es barato (milisegundos), asi que
-    revisar los ~85 meses cada 06:00/18:00 cuesta ~20s y detecta cualquier
+    revisar los ~85 meses cada corrida diaria (00:00 CR) cuesta ~20s y detecta cualquier
     reescritura de CUALQUIER mes en <=12h (nada de esperar 40 dias).
     El rango crece solo: cuando salga 202609, entra al rango automaticamente."""
     hoy = datetime.now()

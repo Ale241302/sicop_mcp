@@ -1,4 +1,5 @@
 """Serializers genericos para los modelos SICOP (mismo nombre de campo = columna fuente)."""
+from django.conf import settings
 from rest_framework import serializers
 
 from sicop import models as m
@@ -22,11 +23,36 @@ def make_serializer(model, name):
     return type(name + "Serializer", (DynamicModelSerializer,), {"Meta": meta})
 
 
+def _mask_cedula(v):
+    """Cédula parcial: conserva 3 + 2 dígitos (búsqueda dirigida sin exponerla)."""
+    v = (v or "").strip()
+    if len(v) <= 5:
+        return "*" * len(v)
+    return v[:3] + "*" * (len(v) - 5) + v[-2:]
+
+
+def _inhibiciones_serializer(base):
+    """Enmascara los datos personales salvo decisión expresa (Ley 8968)."""
+    def to_representation(self, obj):
+        data = base.to_representation(self, obj)
+        if not getattr(settings, "SICOP_INHIBICIONES_NOMBRES", False):
+            if data.get("NOM_FUNCIONARIO"):
+                data["NOM_FUNCIONARIO"] = "DATO_PERSONAL_RESTRINGIDO"
+            if data.get("CED_FUNCIONARIO"):
+                data["CED_FUNCIONARIO"] = _mask_cedula(data["CED_FUNCIONARIO"])
+        return data
+
+    return type(base.__name__, (base,), {"to_representation": to_representation})
+
+
 SERIALIZER_BY_MODEL = {}
 
 
 def serializer_for(model):
     name = model.__name__
     if name not in SERIALIZER_BY_MODEL:
-        SERIALIZER_BY_MODEL[name] = make_serializer(model, name)
+        ser = make_serializer(model, name)
+        if name == "SicopInhibiciones":
+            ser = _inhibiciones_serializer(ser)
+        SERIALIZER_BY_MODEL[name] = ser
     return SERIALIZER_BY_MODEL[name]

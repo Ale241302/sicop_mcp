@@ -1,5 +1,8 @@
 """Tablas de control + tests como gate + publicacion atomica de gold (plan Fase 1)."""
+import csv
+import json
 import logging
+import os
 from datetime import datetime
 
 from django.utils import timezone
@@ -12,6 +15,9 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 OUTLIER = 10**12
+# RESULTADO de un chequeo que NO pudo correr (no es PASS ni FAIL): la skill §0
+# exige que "un chequeo que no corre sea distinguible de uno que pasa".
+NO_EVALUADO = "NO_EVALUADO"
 
 
 def registrar_corrida(corrida_id, alcance, notas=""):
@@ -29,6 +35,115 @@ def _test(corrida_id, name, ok, obtenido, umbral):
                            RESULTADO="PASS" if ok else "FAIL",
                            VALOR_OBTENIDO=str(obtenido), UMBRAL=umbral)
     return ok
+
+
+def _test_resultado(corrida_id, name, resultado, obtenido, umbral):
+    """Registra un chequeo con resultado explicito (REVISAR / NO_EVALUADO / ...).
+
+    Se usa para lo que no es ni PASS ni FAIL: desvíos que piden revisión humana
+    y chequeos que no pudieron correr. Ambos quedan consultables en `ctl_test`,
+    nunca confundibles con un PASS.
+    """
+    CtlTest.objects.create(CORRIDA_ID=corrida_id, TEST=name,
+                           RESULTADO=resultado, VALOR_OBTENIDO=str(obtenido)[:2000],
+                           UMBRAL=umbral)
+
+
+def resumen_resultados(corrida_id):
+    """{RESULTADO: n} de los chequeos de una corrida (para las notas de cierre)."""
+    from django.db.models import Count
+
+    return {r: n for r, n in CtlTest.objects.filter(CORRIDA_ID=corrida_id)
+            .values_list("RESULTADO").annotate(n=Count("id"))}
+
+
+def _columnas_ausentes_manifiesto():
+    """Columnas que el extractor marcó como ausentes del CSV (manifiesto.json)."""
+    from django.conf import settings
+
+    p = os.path.join(settings.SICOP_DATA_DIR, "manifiesto.json")
+    if not os.path.exists(p):
+        return None
+    try:
+        man = json.loads(open(p, encoding="utf-8").read())
+    except (json.JSONDecodeError, OSError):
+        return None
+    aus = {}
+    for _mes, m in (man.get("meses") or {}).items():
+        if m.get("estado") != "OK":
+            continue
+        for cname, cs in (m.get("conjuntos") or {}).items():
+            for c in (cs.get("columnas_ausentes") or []):
+                aus.setdefault(cname, set()).add(c)
+    return {k: sorted(v) for k, v in aus.items()}
+
+
+def _columnas_ausentes_esquema():
+    """Compara lo visto por el loader (ctl_esquema) contra lo esperado (§7)."""
+    from . import a2
+
+    esperadas = a2.columnas_esperadas() if a2 else {}
+    if not esperadas:
+        return None
+    vistas = {r["TABLA"]: (r["COLUMNAS_VISTAS"] or "").split(",")
+              for r in CtlEsquema.objects.all().values("TABLA", "COLUMNAS_VISTAS")}
+    aus = {}
+    for conjunto, cols in esperadas.items():
+        v = vistas.get(conjunto)
+        if not v or v == [""]:
+            continue  # conjunto no cargado todavia: no es ausencia de columna
+        faltan = [c for c in cols if c and c not in v]
+        if faltan:
+            aus[conjunto] = faltan
+    return aus
+
+
+def _chequeo_esquema():
+    """BLOQUEADO si falta cualquier columna esperada (§7). None = no evaluable."""
+    man = _columnas_ausentes_manifiesto()
+    esq = _columnas_ausentes_esquema()
+    if man is None and esq is None:
+        return None
+    aus = {}
+    for fuente in (man or {}, esq or {}):
+        for k, v in fuente.items():
+            aus.setdefault(k, set()).update(v)
+    return {k: sorted(v) for k, v in aus.items()}
+
+
+def registrar_cuarentena_desde_archivo(corrida_id, qdir):
+    """Vuelca la cuarentena del extractor a `ctl_cuarentena` (idempotente).
+
+    El extractor archiva crudas las filas que no puede reconstruir en
+    `<salida>/_cuarentena/<conjunto>_<anio>.csv` (columnas CONJUNTO,
+    MES_PUBLICACION, MOTIVO, N_CAMPOS, CAMPOS_CRUDOS). Antes ese directorio no
+    llegaba a la base: la cuarentena existía en disco pero no era consultable.
+
+    `qdir` puede ser el directorio `_cuarentena` o un archivo concreto.
+    Devuelve el número de filas archivadas.
+    """
+    if not qdir or not os.path.exists(qdir):
+        return 0
+    if os.path.isdir(qdir):
+        archivos = [os.path.join(qdir, f) for f in sorted(os.listdir(qdir))
+                    if f.endswith(".csv")]
+    else:
+        archivos = [qdir]
+    n = 0
+    for archivo in archivos:
+        base = os.path.basename(archivo)
+        CtlCuarentena.objects.filter(CORRIDA_ID=corrida_id, ARCHIVO=base).delete()
+        with open(archivo, encoding="utf-8-sig", newline="") as fh:
+            for i, row in enumerate(csv.DictReader(fh), 1):
+                motivo = row.get("MOTIVO") or ""
+                ncampos = row.get("N_CAMPOS")
+                if ncampos:
+                    motivo = f"{motivo} (n_campos={ncampos})"
+                registrar_cuarentena(
+                    corrida_id, row.get("CONJUNTO"), base, i, motivo,
+                    row.get("CAMPOS_CRUDOS"))
+                n += 1
+    return n
 
 
 def run_tests(corrida_id):
@@ -118,6 +233,44 @@ def run_tests(corrida_id):
     n_multi = FactOrden.objects.filter(N_LINEAS__gt=1).count()
     results["orden_multilinea"] = _test(corrida_id, "orden_multilinea",
                                         True, f"{n_multi} multilinea", "existen (test informativo)")
+
+    # 9. esquema: cualquier columna esperada ausente -> BLOQUEADO (§7). Antes se
+    #    detectaba en el manifiesto pero no bloqueaba; ahora es gate.
+    aus = _chequeo_esquema()
+    if aus is None:
+        _test_resultado(corrida_id, "esquema_columnas", NO_EVALUADO,
+                        "sin manifiesto ni ctl_esquema (no se pudo comparar)",
+                        "0 columnas ausentes")
+    else:
+        results["esquema_columnas"] = _test(
+            corrida_id, "esquema_columnas", not aus,
+            ", ".join(f"{k}:{','.join(v[:6])}" for k, v in sorted(aus.items())) or "ninguna",
+            "0 columnas ausentes")
+
+    # 10. A2 del harness (skill §7): inventario del zip, salto de magnitud,
+    #     cobertura del cruce y no_evaluados. BLOQUEADO detiene; REVISAR y
+    #     NO_EVALUADO se registran sin bloquear (pero nunca como PASS).
+    from . import a2 as _a2
+
+    ra2 = _a2.evaluar()
+    ver = ra2.get("veredicto")
+    if ver == "BLOQUEADO":
+        results["a2_bloqueado"] = _test(corrida_id, "a2_bloqueado", False,
+                                        ra2.get("motivo") or "A2 BLOQUEADO",
+                                        "CONFIABLE/REVISAR")
+    elif ver in ("CONFIABLE", "REVISAR"):
+        results["a2_bloqueado"] = _test(corrida_id, "a2_bloqueado", True, ver,
+                                        "CONFIABLE/REVISAR")
+    else:
+        _test_resultado(corrida_id, "a2_bloqueado", NO_EVALUADO,
+                        ra2.get("motivo") or "A2 no corrio", "correr")
+    for d in ra2.get("desvios") or []:
+        _test_resultado(corrida_id, f"a2_{d.get('chequeo')}",
+                        d.get("severidad") or "REVISAR", d.get("detalle"),
+                        "REVISAR/BLOQUEADO")
+    for ne in ra2.get("no_evaluados") or []:
+        _test_resultado(corrida_id, f"a2_no_eval_{ne.get('chequeo')}",
+                        NO_EVALUADO, ne.get("motivo"), "correr")
 
     failed = [k for k, v in results.items() if not v]
     return results, failed

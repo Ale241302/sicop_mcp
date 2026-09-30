@@ -43,7 +43,7 @@ def load_all(self, force=False, only=None, gold=True, core=True):
 
 @shared_task(bind=True, name="sicop.ciclo_diario")
 def ciclo_diario(self, corrida=None):
-    """El ciclo de las 06:00: vigilancia + consolidar + senales + cola + gold."""
+    """El ciclo de las 00:00 CR (dom-vie): vigilancia + consolidar + senales + cola + gold."""
     from .ciclo import ciclo_diario as run
 
     return run(corrida=corrida, reprocesar=True, gold=True)
@@ -87,7 +87,7 @@ def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
     from django.conf import settings
     from django.core.cache import cache
 
-    from sicop import bronze, control, loader, silver
+    from sicop import bronze, control, loader, sellos, silver
     from sicop.derivadas import run as run_derivadas
 
     corrida = corrida or f"reparar-{aaaamm}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
@@ -125,6 +125,7 @@ def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
 
         # sembrar la base COMPLETA del anio en recuperacion: si no, el extractor
         # opera sobre una copia parcial y el mes re-extraido no llega a silver.
+        sello = sellos.sellar(corrida)
         sembrados = loader.sembrar_recuperacion(out, settings.SICOP_DATA_DIR, y)
         if sembrados:
             print(f"  sembrados {len(sembrados)} CSV anuales en recuperacion", flush=True)
@@ -137,7 +138,17 @@ def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
             control.cerrar_corrida(corrida, "BLOQUEADO", notas=f"extractor rc={rc}")
             return {"corrida": corrida, "estado": "ERROR", "extractor_rc": rc}
 
-        loader.recargar_anio_afectado(out, settings.SICOP_DATA_DIR, y, corrida=corrida)
+        # skill §12.5: si codigo/config cambio a mitad de la reparacion, la mezcla
+        # se rechaza (no se recarga a Salidas).
+        diffs = sellos.comparar(sello, sellos.sello_actual())
+        if diffs:
+            control.cerrar_corrida(corrida, "BLOQUEADO",
+                                   notas=f"sello roto: {diffs[:3]}")
+            return {"corrida": corrida, "estado": "ERROR", "sello_roto": diffs}
+
+        loader.recargar_anio_afectado(out, settings.SICOP_DATA_DIR, y, corrida=corrida,
+                                      sello_esperado=sello)
+        control.registrar_cuarentena_desde_archivo(corrida, os.path.join(out, "_cuarentena"))
         for setn in bronze.BRONZE_SETS:
             p = os.path.join(out, f"{setn}_{y}.csv")
             if os.path.exists(p) and os.path.getsize(p) > 1000:
@@ -157,7 +168,7 @@ def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
 def sync_capas(self, corrida=None):
     """FASE C/D/E: sincroniza las capas derivadas (dim_entidad, embeddings, grafo,
     gold_invitaciones) DESPUES del gold+gate del ciclo diario. Idempotente e
-    incremental. Se dispara desde celery-beat (06:20/18:20) y tambien se corre
+    incremental. Se dispara desde celery-beat (00:20 CR, dom-vie) y tambien se corre
     dentro de sicop.ciclo_diario tras el gate (ver ciclo.py)."""
     from sicop.sync_capas import sync_capas as run
 

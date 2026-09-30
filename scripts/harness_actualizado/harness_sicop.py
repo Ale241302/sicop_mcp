@@ -453,7 +453,11 @@ def chequeo_salto_magnitud(out: Path, year: int):
     """Cada precio contra la mediana de su propio CODIGO_PRODUCTO_CL (agrupar por
     producto es obligatorio: un tornillo y una grúa difieren legítimamente por
     órdenes de magnitud). Umbral 100×: el error de digitación puede ser de dos
-    ceros (CICAP-UCR 2019: ₡49,5 millones como ₡49,5 mil millones)."""
+    ceros (CICAP-UCR 2019: ₡49,5 millones como ₡49,5 mil millones).
+
+    Precios de ₡1 (o menos) se excluyen ANTES de calcular la mediana y de marcar:
+    la skill §8 los declara simbólicos o 'por definir'. Incluirlos ensuciaba el
+    chequeo con cientos de falsos positivos (precio=1 vs mediana=720.750)."""
     path = out / "competencia_por_linea.csv"
     if not path.exists():
         return None, "falta competencia_por_linea.csv"
@@ -464,7 +468,7 @@ def chequeo_salto_magnitud(out: Path, year: int):
             filas.append(r)
             cod = (r.get("CODIGO_PRODUCTO_CL") or "").strip()
             p = sicop_loop.parse_number(r.get("PRECIO_UNITARIO_CRC") or "")
-            if p is not None and p > 0 and cod:
+            if p is not None and p > 1 and cod:
                 grupos[cod].append(p)
     if not grupos:
         return None, "sin precios con CODIGO_PRODUCTO_CL para agrupar"
@@ -475,7 +479,7 @@ def chequeo_salto_magnitud(out: Path, year: int):
         cod = (r.get("CODIGO_PRODUCTO_CL") or "").strip()
         p = sicop_loop.parse_number(r.get("PRECIO_UNITARIO_CRC") or "")
         med = medianas.get(cod)
-        if p is None or p <= 0 or med is None or med <= 0:
+        if p is None or p <= 1 or med is None or med <= 0:
             continue
         if p > 100 * med or p < med / 100:
             saltos += 1

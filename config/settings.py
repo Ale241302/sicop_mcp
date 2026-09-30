@@ -104,7 +104,7 @@ REST_FRAMEWORK = {
 }
 
 # ---- Cache (Redis): el resumen de conteos se cachea ~6h (los datos solo
-# cambian en el ciclo de 06:00/18:00) para que /api/v1/resumen/ y el Atlas
+# cambian en el ciclo diario de las 00:00 CR) para que /api/v1/resumen/ y el Atlas
 # carguen en milisegundos en vez de contar 55 tablas (incl. 42M filas) cada vez.
 CACHES = {
     "default": {
@@ -123,8 +123,8 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_IGNORE_RESULT = False
 CELERY_TASK_TRACK_STARTED = True
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-# --- zona horaria: el cron debe disparar a las 06:00 y 18:00 hora de CR ---
-# (sin esto, el beat en UTC dispara a las 00:00 y 12:00 CR).
+# --- zona horaria: el cron corre en horario muerto, 00:00 hora de CR ---
+# (sin esto, el beat en UTC dispararia a las 18:00 del dia anterior, hora CR).
 CELERY_TIMEZONE = "America/Costa_Rica"
 # --- robustez: evitar re-entregas del broker cuando el worker esta ocupado ---
 # El worker con prefetch=1 no reclama mas mensajes de los que puede correr;
@@ -175,6 +175,13 @@ CELERY_BEAT_SCHEDULE = {
 SICOP_DATA_DIR = os.environ.get("SICOP_DATA_DIR", str(BASE_DIR.parent / "Salidas"))
 SICOP_SCRIPTS_DIR = os.environ.get("SICOP_SCRIPTS_DIR", str(BASE_DIR.parent / "03_scripts"))
 SICOP_RECOVERY_DIR = os.environ.get("SICOP_RECOVERY_DIR", str(BASE_DIR.parent / "salida_recuperacion"))
+
+# ---- Privacidad: nombres de funcionarios en `inhibiciones` (Ley 8968) ----
+# Decision escrita: 04_verificaciones/DECISION_INHIBICIONES_API.md.
+# Por defecto la API NO devuelve nombre ni cedula del funcionario (minimizacion
+# y finalidad); se puede habilitar con SICOP_INHIBICIONES_NOMBRES=1 para un uso
+# dirigido y autorizado. El uso estandar es por institucion, no por persona.
+SICOP_INHIBICIONES_NOMBRES = os.environ.get("SICOP_INHIBICIONES_NOMBRES", "0") == "1"
 
 # ---- Fuentes externas (F5) ----
 BCCR_TOKEN = os.environ.get("BCCR_TOKEN", "")

@@ -514,12 +514,12 @@ DOCS = {
         "casos": "Llenar un hueco de carga real detectado por sicop_reconciliar.",
     },
     "sicop_ciclo_diario": {
-        "para": "EJECUTA el ciclo diario de las 06:00: vigilancia + consolidar + senales + cola + gold.",
+        "para": "EJECUTA el ciclo diario de las 00:00 CR (dom-vie): vigilancia + consolidar + senales + cola + gold.",
         "preguntar": "Corre el ciclo diario.",
         "args": '{}',
         "respuesta": "Resultado del ciclo (async).",
         "no_usar": [
-            "El cron de las 06:00/18:00 CR ya lo corre: solo dispáralo manualmente si necesitas un ciclo fuera de horario.",
+            "El cron de las 00:00 CR (dom-vie) ya lo corre: solo dispáralo manualmente si necesitas un ciclo fuera de horario.",
         ],
         "casos": "Forzar un ciclo para reflejar un cambio de la fuente.",
     },
