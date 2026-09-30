@@ -100,3 +100,20 @@ class HuecosFuenteJsonTest(SimpleTestCase):
             self.assertRegex(h["mes"], r"^\d{6}$")
             tipos.add(h["tipo"])
         self.assertTrue({"ZIP_VACIO", "TRUNCADO_FUENTE", "REPUBLICADO"} <= tipos)
+
+
+class SenalesCambioFuenteTest(SimpleTestCase):
+    """La reescritura de la fuente debe ser UNA sola senal por mes (no una por dia)."""
+
+    def test_senales_define_helpers(self):
+        from pathlib import Path
+        src = (Path(__file__).resolve().parent / "senales.py").read_text(encoding="utf-8")
+        self.assertIn("def emitir_cambio_fuente(", src)
+        self.assertIn("def atender_cambio_fuente(", src)
+
+    def test_ciclo_usa_el_helper_deduplicado(self):
+        from pathlib import Path
+        src = (Path(__file__).resolve().parent / "ciclo.py").read_text(encoding="utf-8")
+        self.assertIn("senales.emitir_cambio_fuente(", src)
+        self.assertIn("senales.atender_cambio_fuente(", src)
+        self.assertNotIn('senales._emit(corrida, "cambio_hash_fuente"', src)

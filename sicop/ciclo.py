@@ -103,8 +103,7 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
         # uno hubiera cambiado (4-6 h, ~38% CPU).
         por_anio = defaultdict(list)
         for m in cambios:
-            senales._emit(corrida, "cambio_hash_fuente", "alta", "", None,
-                          f"la fuente reescribio {m}", "reprocesar el mes", m)
+            senales.emitir_cambio_fuente(corrida, m)
             por_anio[m[:4]].append(m[4:])
         for y, mms in sorted(por_anio.items()):
             meses_arg = ",".join(sorted(set(mms)))
@@ -145,6 +144,9 @@ def ciclo_diario(corrida=None, reprocesar=True, gold=True):
             return total
         _paso(corrida, "broncear", _broncear,
               detalle_ok=lambda t: f"+{t} filas (meses {sorted(cambios)})")
+        # el mes ya se reproceso (recarga+bronce): la senal de reescritura queda ATENDIDA
+        for m in cambios:
+            senales.atender_cambio_fuente(m, corrida)
         if any(r.get("copiados") for r in recargados):
             _paso(corrida, "silver",
                   lambda: silver.build_all(corrida),

@@ -27,10 +27,47 @@ def _watchlist(path=None):
 
 
 def _emit(corrida, tipo, prioridad, nro_sicop, nro_linea, titulo, detalle, evidencia):
-    Senal.objects.create(fecha=timezone.now(), corrida=corrida, tipo=tipo, prioridad=prioridad,
-                         nro_sicop=nro_sicop, nro_linea=nro_linea, titulo=titulo,
-                         detalle=detalle, evidencia=evidencia, estado="DETECTADA")
+    """Emite una senal IDEMPOTENTE por clave natural (tipo, nro_sicop, nro_linea,
+    evidencia).
+
+    Las reglas re-evaluan la ventana de 14 dias en cada ciclo; sin esto una misma
+    senal (reescritura de la fuente del mes, un cartel objetado, una adjudicacion
+    del cliente) se duplicaba cada corrida y dominaba 'Señales del dia'. Si ya
+    existe, se refresca en vez de duplicar.
+    """
+    clave = dict(tipo=tipo, nro_sicop=nro_sicop or "", nro_linea=nro_linea, evidencia=evidencia)
+    s = Senal.objects.filter(**clave).order_by("-id").first()
+    if s is not None:
+        s.fecha = timezone.now()
+        s.corrida = corrida
+        s.prioridad = prioridad
+        s.titulo = titulo
+        s.detalle = detalle
+        s.estado = "DETECTADA"
+        s.save(update_fields=["fecha", "corrida", "prioridad", "titulo", "detalle", "estado"])
+        return s
+    s = Senal.objects.create(fecha=timezone.now(), corrida=corrida, tipo=tipo,
+                             prioridad=prioridad, nro_sicop=nro_sicop or "", nro_linea=nro_linea,
+                             titulo=titulo, detalle=detalle, evidencia=evidencia,
+                             estado="DETECTADA")
     print(f"  senal {prioridad.upper()} {tipo} {nro_sicop} - {titulo[:60]}", flush=True)
+    return s
+
+
+def emitir_cambio_fuente(corrida, mes):
+    """Señal de reescritura de la fuente: una sola por mes (idempotente)."""
+    return _emit(corrida, "cambio_hash_fuente", "alta", "", None,
+                 f"la fuente reescribio {mes}", "reprocesar el mes", mes)
+
+
+def atender_cambio_fuente(mes, corrida=None, nota="reprocesado en la misma corrida"):
+    """Marca ATENDIDA la señal de reescritura del mes (ya se reproceso)."""
+    qs = Senal.objects.filter(tipo="cambio_hash_fuente", evidencia=mes, estado="DETECTADA")
+    campos = {"estado": "ATENDIDA", "detalle": nota}
+    if corrida:
+        campos["corrida"] = corrida
+    return qs.update(**campos)
+
 
 
 def generar_senales(corrida, dias=14, path=None):
