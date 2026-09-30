@@ -13,6 +13,7 @@ from decimal import Decimal, InvalidOperation
 from datetime import datetime, date
 
 from django.db import transaction
+from django.utils import timezone
 
 from .models import LoadState
 
@@ -153,12 +154,18 @@ def _dt(v):
     v = _empty(v)
     if v is None:
         return None
+    dt = None
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y"):
         try:
-            return datetime.strptime(v[:19] if "%H:%M" in fmt else v[:10], fmt)
+            dt = datetime.strptime(v[:19] if "%H:%M" in fmt else v[:10], fmt)
+            break
         except ValueError:
             continue
-    return None
+    # La fuente publica fechas sin zona; con USE_TZ=True asignarlas naive emite
+    # RuntimeWarning y guarda hora ambigua. Se interpretan en la zona local (CR).
+    if dt is not None and timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
 
 
 def _int(v):

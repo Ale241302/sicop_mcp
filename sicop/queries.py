@@ -2204,6 +2204,27 @@ def integridad(tabla=None, mes=None, moneda=False):
             out["veredictos_censo"] = [{"veredicto": r[0], "n": r[1]} for r in cur.fetchall()]
             cur.execute("SELECT mes, count(*) n FROM meta.mapa_huecos_mes GROUP BY 1 ORDER BY 1 LIMIT 12")
             out["huecos_por_mes_top"] = [{"mes": r[0], "n": r[1]} for r in cur.fetchall()]
+        # huecos IRRECUPERABLES de la fuente (declarados en meta.hueco_declarado)
+        try:
+            if tabla:
+                cur.execute(
+                    "SELECT mes, tipo, motivo FROM meta.hueco_declarado "
+                    "WHERE conjunto=%s ORDER BY mes LIMIT 200", [tabla])
+                cols = [c[0] for c in cur.description]
+                out["huecos_fuente"] = [dict(zip(cols, r)) for r in cur.fetchall()]
+            elif mes:
+                cur.execute(
+                    "SELECT conjunto, tipo, motivo FROM meta.hueco_declarado "
+                    "WHERE mes=%s ORDER BY conjunto LIMIT 200", [mes])
+                cols = [c[0] for c in cur.description]
+                out["huecos_fuente"] = [dict(zip(cols, r)) for r in cur.fetchall()]
+            else:
+                cur.execute("SELECT tipo, count(*) n FROM meta.hueco_declarado GROUP BY 1 ORDER BY 2 DESC")
+                out["huecos_fuente_por_tipo"] = [{"tipo": r[0], "n": r[1]} for r in cur.fetchall()]
+                cur.execute("SELECT conjunto, count(*) n FROM meta.hueco_declarado GROUP BY 1 ORDER BY 2 DESC LIMIT 20")
+                out["huecos_fuente_por_conjunto"] = [{"conjunto": r[0], "n": r[1]} for r in cur.fetchall()]
+        except Exception:  # noqa: BLE001
+            out["huecos_fuente"] = "no declarados aun (manage.py declarar_huecos)"
         if moneda:
             cur.execute("SELECT clase, anio, moneda, n_ordenes, monto_original FROM meta.moneda_subregistro")
             cols = [c[0] for c in cur.description]

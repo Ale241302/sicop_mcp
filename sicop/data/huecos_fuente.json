@@ -1,0 +1,1807 @@
+{
+ "sobre": "Huecos IRRECUPERABLES de la fuente SICOP, declarados. No son errores de carga; la fuente no publico el dato (o publico un mes truncado/copiado del anterior).",
+ "generado": "2026-09-29",
+ "metodo": "censo estatico (ZIP_VACIO/VACIO) + auditoria con descarga de ZIP oficiales",
+ "total": 257,
+ "huecos": [
+  {
+   "mes": "202001",
+   "conjunto": "carteles",
+   "tipo": "REPUBLICADO",
+   "motivo": "DetalleCarteles del ZIP 202001 republica 2019-12.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202001",
+   "conjunto": "ordenes_pedido",
+   "tipo": "REPUBLICADO",
+   "motivo": "El ZIP 202001 trae fechas de 2019-12; enero 2020 sin ordenes.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202001",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202002",
+   "conjunto": "adjudicaciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3276/3276 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202002",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202002",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202002",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202002",
+   "conjunto": "remates",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "carteles",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 2045/2045 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "contratos",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 2026/2026 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "etapas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 7728/7728 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "invitaciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "InvitacionProcedimiento.csv ausente/0 filas en el ZIP.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 13357/13357 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "remates",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202003",
+   "conjunto": "sanciones_registro",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 12/12 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip trae "
+  },
+  {
+   "mes": "202004",
+   "conjunto": "contratos",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202004",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202004",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202004",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "etapas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 9358/9358 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "garantias",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 1995/1995 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "lineas_adjudicadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3594/3594 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "lineas_cartel",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 4071/4071 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "lineas_contratadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 4429/4429 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "lineas_recibidas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 1183/1190 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "remates",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202005",
+   "conjunto": "sanciones_registro",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 10/10 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip trae "
+  },
+  {
+   "mes": "202006",
+   "conjunto": "carteles",
+   "tipo": "REPUBLICADO",
+   "motivo": "DetalleCarteles del ZIP 202006 republica 2020-05.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202006",
+   "conjunto": "contratos",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 2866/2866 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202006",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202006",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 9620/9620 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202006",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202006",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202006",
+   "conjunto": "reajustes",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 4/4 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202006",
+   "conjunto": "recepciones",
+   "tipo": "REPUBLICADO",
+   "motivo": "LineasRecibidas no publica fecha_recepcion en 202006 (el stream Recepciones.csv si).",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202007",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202007",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202007",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "adjudicaciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3090/3090 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "carteles",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 2428/2428 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "carteles",
+   "tipo": "REPUBLICADO",
+   "motivo": "DetalleCarteles del ZIP 202008 republica 2020-07.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "garantias",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "invitaciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "InvitacionProcedimiento.csv ausente/0 filas en el ZIP.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "lineas_cartel",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3527/3527 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "lineas_recibidas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 1849/1857 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202008",
+   "conjunto": "recepciones",
+   "tipo": "REPUBLICADO",
+   "motivo": "LineasRecibidas no publica fecha_recepcion en 202008 (el stream Recepciones.csv si).",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202009",
+   "conjunto": "etapas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 12063/12063 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202009",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202009",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 16537/16537 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202009",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202009",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202009",
+   "conjunto": "remates",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202010",
+   "conjunto": "contratos",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3562/3562 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202010",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202010",
+   "conjunto": "lineas_adjudicadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202010",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202010",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202010",
+   "conjunto": "recepciones",
+   "tipo": "REPUBLICADO",
+   "motivo": "LineasRecibidas no publica fecha_recepcion en 202010 (el stream Recepciones.csv si).",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202011",
+   "conjunto": "garantias",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3107/3107 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202011",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202011",
+   "conjunto": "lineas_contratadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 4746/4746 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202011",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 14449/14449 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202011",
+   "conjunto": "ofertas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 24870/24870 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202011",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202011",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202012",
+   "conjunto": "etapas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 15398/15398 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202012",
+   "conjunto": "inhibiciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 90/90 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202012",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202012",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202101",
+   "conjunto": "ordenes_pedido",
+   "tipo": "REPUBLICADO",
+   "motivo": "El ZIP 202101 republica ordenes de 2020-12; enero 2021 no fue publicado por la fuente.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202101",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202101",
+   "conjunto": "recepciones",
+   "tipo": "REPUBLICADO",
+   "motivo": "LineasRecibidas del ZIP 202101 trae fechas de 2020-12.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202102",
+   "conjunto": "evaluacion_ofertas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 837/837 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip tra"
+  },
+  {
+   "mes": "202102",
+   "conjunto": "inhibiciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 247/247 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip tra"
+  },
+  {
+   "mes": "202102",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202102",
+   "conjunto": "invitaciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "InvitacionProcedimiento.csv ausente/0 filas en el ZIP.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202102",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202102",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202102",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "*",
+   "tipo": "REPUBLICADO",
+   "motivo": "El ZIP 202103 es copia byte a byte del 202102: adjudicaciones/lineas_*/ofertas/recepciones/ordenes de marzo 2021 no existen en la fuente.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "adjudicaciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 4257/4257 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "adjudicaciones_firme",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 1641/1641 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "carteles",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 1756/1756 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "contratos",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 1748/1748 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "etapas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 9136/9136 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "lineas_adjudicadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 4741/4741 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "lineas_contratadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 5201/5201 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "ofertas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 13628/13628 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "ordenes_pedido",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 8297/8297 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "ordenes_pedido",
+   "tipo": "REPUBLICADO",
+   "motivo": "El ZIP 202103 es copia del 202102; marzo 2021 no fue publicado.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "recepciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 650/650 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip tra"
+  },
+  {
+   "mes": "202103",
+   "conjunto": "remates",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 67/67 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip trae "
+  },
+  {
+   "mes": "202103",
+   "conjunto": "sanciones_registro",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 30/30 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip trae "
+  },
+  {
+   "mes": "202104",
+   "conjunto": "carteles",
+   "tipo": "REPUBLICADO",
+   "motivo": "DetalleCarteles del ZIP 202104 republica FECHA_PUBLICACION de 2021-03.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202104",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202104",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202104",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202105",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202105",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 14487/14487 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202105",
+   "conjunto": "lineas_recibidas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 1708/1714 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202105",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202105",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202105",
+   "conjunto": "recepciones",
+   "tipo": "REPUBLICADO",
+   "motivo": "LineasRecibidas del ZIP 202105 republica 2021-04.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202106",
+   "conjunto": "carteles",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 2818/2818 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202106",
+   "conjunto": "carteles",
+   "tipo": "REPUBLICADO",
+   "motivo": "DetalleCarteles del ZIP 202106 republica FECHA_PUBLICACION de 2021-05.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202106",
+   "conjunto": "contratos",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3637/3637 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202106",
+   "conjunto": "evaluacion_ofertas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3407/3407 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202106",
+   "conjunto": "inhibiciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 56/56 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202106",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202106",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202106",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202107",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202107",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202107",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202107",
+   "conjunto": "reajustes",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 32/32 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip trae "
+  },
+  {
+   "mes": "202107",
+   "conjunto": "remates",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 1022/1022 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202108",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202108",
+   "conjunto": "lineas_cartel",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202108",
+   "conjunto": "lineas_contratadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 5188/5188 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202108",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202108",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202109",
+   "conjunto": "carteles",
+   "tipo": "REPUBLICADO",
+   "motivo": "DetalleCarteles del ZIP 202109 republica FECHA_PUBLICACION de 2021-08.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202109",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202109",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202109",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202109",
+   "conjunto": "reajustes",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 55/55 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip trae "
+  },
+  {
+   "mes": "202110",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202110",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202111",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202111",
+   "conjunto": "invitaciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "InvitacionProcedimiento.csv ausente/0 filas en el ZIP.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202111",
+   "conjunto": "lineas_contratadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 5460/5460 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202111",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 14943/14943 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202111",
+   "conjunto": "lineas_recibidas",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3931/3947 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202111",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202111",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202111",
+   "conjunto": "recepciones",
+   "tipo": "REPUBLICADO",
+   "motivo": "LineasRecibidas del ZIP 202111 republica 2021-10.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202111",
+   "conjunto": "remates",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 681/681 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip tra"
+  },
+  {
+   "mes": "202112",
+   "conjunto": "adjudicaciones_firme",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 8677/8677 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202112",
+   "conjunto": "carteles",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 4679/4679 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202112",
+   "conjunto": "carteles",
+   "tipo": "REPUBLICADO",
+   "motivo": "DetalleCarteles del ZIP 202112 republica FECHA_PUBLICACION de 2021-11.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202112",
+   "conjunto": "contratos",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 6451/6451 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202112",
+   "conjunto": "garantias",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 3895/3895 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto; el zip t"
+  },
+  {
+   "mes": "202112",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202112",
+   "conjunto": "procedimientos_adm",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 2/2 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202112",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202201",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202202",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202202",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202202",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202203",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202203",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202204",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202204",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202205",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202205",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202205",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202206",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202206",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202206",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202207",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202207",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202207",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202208",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202208",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202209",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202209",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202209",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202210",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202210",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202210",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202210",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202211",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202211",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202211",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202212",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202301",
+   "conjunto": "instituciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202301",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202301",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202301",
+   "conjunto": "recursos",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202302",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202302",
+   "conjunto": "remates",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202303",
+   "conjunto": "contratos",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202304",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202304",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202305",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202305",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202305",
+   "conjunto": "remates",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202306",
+   "conjunto": "ordenes_pedido",
+   "tipo": "REPUBLICADO",
+   "motivo": "El miembro OrdenPedido.csv del ZIP 202306 vino vacio (0 bytes).",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202306",
+   "conjunto": "ordenes_pedido",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202307",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202308",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202308",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202309",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202309",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202310",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202311",
+   "conjunto": "invitaciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "InvitacionProcedimiento.csv ausente/0 filas en el ZIP.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202311",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202312",
+   "conjunto": "inhibiciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202312",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202312",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202401",
+   "conjunto": "adjudicaciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202401",
+   "conjunto": "lineas_adjudicadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202401",
+   "conjunto": "lineas_contratadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202401",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202401",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202401",
+   "conjunto": "proveedores",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202402",
+   "conjunto": "adjudicaciones_firme",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202402",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202403",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202403",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202403",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202404",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202405",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202406",
+   "conjunto": "invitaciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "InvitacionProcedimiento.csv ausente/0 filas en el ZIP.",
+   "evidencia": "auditoria 2026-09-29 (zipfile)"
+  },
+  {
+   "mes": "202407",
+   "conjunto": "*",
+   "tipo": "TRUNCADO_FUENTE",
+   "motivo": "La fuente publico el ZIP 202407 truncado al dia 11 (carpeta anidada 202407/202407); faltan los dias 12-31 en ordenes/recepciones/adjudicaciones. El ZIP 202408 arranca el dia 1.",
+   "evidencia": "curl Zip/202407.zip + min/max de fechas de OrdenPedido/Recepciones/AdjudicacionesFirme"
+  },
+  {
+   "mes": "202408",
+   "conjunto": "procedimientos_adm",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: consolidacion: 1/1 claves del zip ya estan en base bajo otro MES (dedup del extractor) ÔÇö no es defecto"
+  },
+  {
+   "mes": "202411",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202411",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202501",
+   "conjunto": "adjudicaciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202501",
+   "conjunto": "lineas_adjudicadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202501",
+   "conjunto": "lineas_contratadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202501",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202502",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202503",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202503",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202504",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202504",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202504",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202504",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202505",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202507",
+   "conjunto": "sanciones_registro",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202511",
+   "conjunto": "*",
+   "tipo": "TRUNCADO_FUENTE",
+   "motivo": "La fuente publico el ZIP 202511 truncado al dia 12; faltan los dias 13-30. El ZIP 202512 arranca el dia 1.",
+   "evidencia": "curl Zip/202511.zip + min/max de fechas de OrdenPedido/Recepciones/DetalleCarteles"
+  },
+  {
+   "mes": "202511",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202511",
+   "conjunto": "remates",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202601",
+   "conjunto": "adjudicaciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202601",
+   "conjunto": "lineas_adjudicadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202601",
+   "conjunto": "lineas_contratadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202601",
+   "conjunto": "lineas_ofertadas",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202601",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202603",
+   "conjunto": "inhibiciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202604",
+   "conjunto": "inhibiciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202604",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202604",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202605",
+   "conjunto": "inhibiciones",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202605",
+   "conjunto": "reajustes",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202607",
+   "conjunto": "instituciones",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  },
+  {
+   "mes": "202607",
+   "conjunto": "procedimientos_adm",
+   "tipo": "ZIP_VACIO",
+   "motivo": "El miembro del ZIP vino ausente o con 0 filas (fuente no lo publico).",
+   "evidencia": "meta.censo_mes_tabla filas_zip=0"
+  },
+  {
+   "mes": "202607",
+   "conjunto": "proveedores",
+   "tipo": "CONSOLIDADO",
+   "motivo": "La fuente republico el mes anterior; las claves existen en base bajo otro MES.",
+   "evidencia": "meta.censo_mes_tabla: snapshot (catalogo): el zip publica el catalogo cada mes; MES_PUBLICACION en base es el sello del snapshot anual, no eve"
+  }
+ ]
+}

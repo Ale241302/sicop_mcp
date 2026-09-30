@@ -69,3 +69,34 @@ class SembrarRecuperacionTest(SimpleTestCase):
             self.assertEqual(copiados, [])
             self.assertEqual((rec / "ordenes_pedido_2026.csv").stat().st_size,
                              len("a\n" * 100))
+
+
+class CoercerDatetimeTest(SimpleTestCase):
+    def test_dt_devuelve_aware(self):
+        from django.utils import timezone as dj_tz
+        for raw in ("2026-09-25 09:27:33", "2026-09-25", "25/09/2026 09:27:33"):
+            dt = loader._dt(raw)
+            self.assertIsNotNone(dt, msg=raw)
+            self.assertFalse(dj_tz.is_naive(dt), msg=f"{raw} debe ser aware")
+
+    def test_dt_vacio(self):
+        self.assertIsNone(loader._dt(""))
+        self.assertIsNone(loader._dt(None))
+
+
+class HuecosFuenteJsonTest(SimpleTestCase):
+    def test_json_valido(self):
+        import json
+        from pathlib import Path
+        p = Path(__file__).resolve().parent / "data" / "huecos_fuente.json"
+        self.assertTrue(p.exists(), "falta sicop/data/huecos_fuente.json")
+        payload = json.loads(p.read_text(encoding="utf-8"))
+        self.assertGreater(payload["total"], 0)
+        self.assertEqual(len(payload["huecos"]), payload["total"])
+        tipos = set()
+        for h in payload["huecos"]:
+            for k in ("mes", "conjunto", "tipo"):
+                self.assertIn(k, h, msg=str(h))
+            self.assertRegex(h["mes"], r"^\d{6}$")
+            tipos.add(h["tipo"])
+        self.assertTrue({"ZIP_VACIO", "TRUNCADO_FUENTE", "REPUBLICADO"} <= tipos)
