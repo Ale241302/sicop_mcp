@@ -91,15 +91,32 @@ def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
     from sicop.derivadas import run as run_derivadas
 
     corrida = corrida or f"reparar-{aaaamm}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-    # lock global: esperar hasta ~30 min a que termine otra reparacion
+    # Lock global (Redis) para serializar reparaciones (el extractor escribe el
+    # mismo anio y silver/gold son globales). TTL CORTO + heartbeat que lo renueva
+    # cada 60s: si el worker muere, el lock vence solo en <=3 min en vez de quedar
+    # 90 min bloqueando toda reparacion (bug que dejo una corrida colgada).
+    import threading
+
     LOCK = "sicop:reparar_mes_lock"
-    if not cache.add(LOCK, corrida, timeout=5400):
+    LOCK_TTL = 180
+    if not cache.add(LOCK, corrida, timeout=LOCK_TTL):
         for _ in range(120):
             time.sleep(15)
-            if cache.add(LOCK, corrida, timeout=5400):
+            if cache.add(LOCK, corrida, timeout=LOCK_TTL):
                 break
         else:
             return {"corrida": corrida, "estado": "ERROR", "motivo": "lock ocupado 30 min"}
+
+    stop_hb = threading.Event()
+
+    def _latido():
+        while not stop_hb.wait(60):
+            try:
+                cache.set(LOCK, corrida, timeout=LOCK_TTL)
+            except Exception:  # noqa: BLE001
+                pass
+
+    threading.Thread(target=_latido, daemon=True).start()
     try:
         control.registrar_corrida(corrida, "reparar_mes", notas=f"reparar {aaaamm}")
         y = aaaamm[:4]
@@ -132,6 +149,7 @@ def reparar_mes(self, aaaamm, corrida=None, reextraer=False):
                                notas=f"tests={len(ok)} PASS / {len(failed)} FAIL")
         return {"corrida": corrida, "estado": "PUBLICADO" if not failed else "BLOQUEADO", "tests_fail": len(failed)}
     finally:
+        stop_hb.set()
         cache.delete(LOCK)
 
 
